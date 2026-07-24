@@ -1,0 +1,2460 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    /* =========================================================
+       1. 全体方針・デザイン (ダークモードUI)
+       ========================================================= */
+    * { box-sizing: border-box; touch-action: manipulation; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background-color: #121212;
+      color: #e0e0e0;
+      margin: 0;
+      padding: 0;
+      -webkit-text-size-adjust: 100%;
+      padding-bottom: calc(70px + env(safe-area-inset-bottom));
+      font-size: clamp(13px, 3.6vw, 15px);
+    }
+
+    input, select, button {
+      font-family: inherit;
+      color: #ffffff;
+      background-color: #2a2a2a;
+      border: 1px solid #444;
+      border-radius: 6px;
+    }
+    input[type="date"], input[type="number"], input[type="text"], select {
+      padding: 8px;
+      font-size: 14px;
+    }
+
+    .header {
+      background-color: #1e1e1e;
+      border-bottom: 1px solid #333;
+      padding: 12px 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+    .header-title { font-size: 1.1rem; font-weight: bold; color: #38bdf8; display: flex; align-items: center; }
+
+    #loading {
+      position: fixed;
+      inset: 0;
+      background: rgba(18, 18, 18, 0.8);
+      z-index: 3000;
+      padding-top: 40vh;
+      text-align: center;
+    }
+    .loading-spinner {
+      width: 36px;
+      height: 36px;
+      border: 4px solid #333;
+      border-top-color: #38bdf8;
+      border-radius: 50%;
+      margin: 0 auto 10px auto;
+      animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    .bottom-nav {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: calc(60px + env(safe-area-inset-bottom));
+      padding-bottom: env(safe-area-inset-bottom);
+      background-color: #1e1e1e;
+      border-top: 1px solid #333;
+      display: flex;
+      justify-content: space-around;
+      align-items: center;
+      z-index: 1000;
+    }
+    .bottom-nav button {
+      flex: 1;
+      min-height: 48px;
+      height: 100%;
+      background: none;
+      border: none;
+      color: #888;
+      font-size: 11px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 2px;
+      cursor: pointer;
+    }
+    .bottom-nav button .nav-icon { font-size: 18px; }
+    .bottom-nav button.active { color: #38bdf8; font-weight: bold; }
+
+    .container { padding: 12px; max-width: 600px; margin: auto; }
+    .card {
+      background: #1e1e1e;
+      border: 1px solid #2d2d2d;
+      border-radius: 12px;
+      padding: 14px;
+      margin-bottom: 12px;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+    }
+
+    .btn {
+      padding: 10px 14px;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      color: white;
+      font-size: 13px;
+      font-weight: bold;
+      transition: opacity 0.2s;
+    }
+    .btn:active { opacity: 0.8; }
+    .btn-primary { background-color: #0284c7; }
+    .btn-success { background-color: #16a34a; }
+    .btn-danger { background-color: #dc2626; }
+    .btn-secondary { background-color: #475569; }
+    .btn-sm { padding: 8px 12px; font-size: 12px; min-height: 36px; }
+    .btn-block { width: 100%; display: block; padding: 12px; font-size: 15px; }
+    .btn-step {
+      width: 44px; height: 44px; border-radius: 50%; font-size: 20px; font-weight: bold;
+      display: flex; align-items: center; justify-content: center; padding: 0;
+    }
+
+    /* 横スクロール対応テーブルラッパー */
+    .table-scroll { width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+
+    .badge { padding: 3px 8px; border-radius: 6px; font-size: 11px; font-weight: bold; display: inline-block; }
+    .badge-green { background-color: rgba(22, 163, 74, 0.2); color: #4ade80; border: 1px solid #16a34a; }
+    .badge-red { background-color: rgba(220, 38, 38, 0.2); color: #f87171; border: 1px solid #dc2626; }
+    .badge-gray { background-color: #334155; color: #cbd5e1; }
+
+    .admin-only { display: none !important; }
+    body.is-admin .admin-only { display: inline-block !important; }
+    body.is-admin div.admin-only, body.is-admin section.admin-only { display: block !important; }
+
+    /* トースト通知 */
+    #toast-container {
+      position: fixed;
+      bottom: 70px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 2000;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      pointer-events: none;
+      width: 90%;
+      max-width: 400px;
+    }
+    .toast {
+      background: #2a2a2a;
+      color: #fff;
+      padding: 12px 16px;
+      border-radius: 8px;
+      border-left: 4px solid #38bdf8;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+      font-size: 13px;
+      opacity: 0;
+      transform: translateY(20px);
+      animation: toastIn 0.3s forwards, toastOut 0.3s 2.7s forwards;
+    }
+    .toast.toast-achievement {
+      border-left: 4px solid #facc15;
+      background: #332a00;
+      color: #fef08a;
+    }
+    @keyframes toastIn { to { opacity: 1; transform: translateY(0); } }
+    @keyframes toastOut { to { opacity: 0; transform: translateY(-10px); } }
+
+    /* スコア入力画面 */
+    .score-card { border: 1px solid #333; border-radius: 10px; margin-bottom: 10px; background: #1e1e1e; overflow: hidden; }
+    .score-card-header { padding: 12px; display: flex; align-items: center; justify-content: space-between; background: #252525; }
+    .member-selector { display: flex; align-items: center; gap: 8px; font-size: 15px; font-weight: bold; cursor: pointer; flex: 1; }
+    .member-selector input[type="checkbox"] { width: 18px; height: 18px; accent-color: #0284c7; }
+    .score-card-body { padding: 12px; border-top: 1px solid #2d2d2d; display: none; }
+    .score-card-body.active { display: block; }
+    .stats-summary { display: flex; gap: 8px; margin-bottom: 10px; background: #121212; padding: 8px; border-radius: 6px; font-size: 12px; color: #aaa; justify-content: space-around; }
+    .input-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 8px; }
+    .input-grid.games-4, .input-grid.games-5 { grid-template-columns: repeat(auto-fit, minmax(50px, 1fr)); }
+    .input-box-wrap.hidden-slot { display: none; }
+    .input-box-wrap label { font-size: 11px; color: #888; display: block; margin-bottom: 2px; text-align: center; }
+    .input-box { width: 100%; text-align: center; font-size: 16px; font-weight: bold; }
+
+    /* テーブル・アコーディオン */
+    table { width: 100%; border-collapse: collapse; font-size: 12px; }
+    th, td { border-bottom: 1px solid #2d2d2d; padding: 8px; text-align: left; }
+    th { background: #252525; color: #aaa; }
+    
+    .accordion-header {
+      background: #252525;
+      padding: 12px;
+      border-radius: 8px;
+      margin-top: 8px;
+      cursor: pointer;
+      display: flex;
+      justify-content: space-between;
+      font-weight: bold;
+      font-size: 13px;
+    }
+
+    /* モーダル */
+    .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); justify-content: center; align-items: center; z-index: 1500; padding: 15px; }
+    .modal-content { background: #1e1e1e; border: 1px solid #333; padding: 18px; border-radius: 12px; width: 100%; max-width: 450px; max-height: 85vh; overflow-y: auto; color: #e0e0e0; }
+
+    /* アチーブメント格子 */
+    .achievement-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-top: 10px; }
+    .achievement-item { text-align: center; padding: 8px 4px; background: #252525; border-radius: 8px; border: 1px solid #333; cursor: pointer; }
+    .achievement-item.locked { opacity: 0.25; filter: grayscale(100%); }
+    .achievement-item.equipped { border: 2px solid #38bdf8; background: rgba(56, 189, 248, 0.1); }
+    .achievement-icon { font-size: 22px; display: block; margin-bottom: 2px; }
+    .achievement-name { font-size: 10px; font-weight: bold; color: #ccc; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+    /* 収支ダッシュボード */
+    .balance-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 10px; text-align: center; }
+    .balance-box { background: #252525; padding: 10px 4px; border-radius: 8px; border: 1px solid #333; }
+    .balance-val { font-size: 16px; font-weight: bold; margin-top: 4px; }
+
+    /* ランキングカード演出用スタイル */
+    .ranking-section { margin-bottom: 20px; }
+    .ranking-section-title {
+      font-size: 17px;
+      font-weight: bold;
+      color: #facc15;
+      margin: 16px 0 10px 0;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .ranking-list { display: flex; flex-direction: column; gap: 8px; }
+    .ranking-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: #252525;
+      border: 1px solid #333;
+      border-radius: 10px;
+      padding: 10px 14px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+    }
+    .rank-badge {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: bold;
+      font-size: 16px;
+      color: #cbd5e1;
+      background: #334155;
+      flex-shrink: 0;
+    }
+
+    .ranking-item.rank-1 {
+      background: linear-gradient(135deg, #451a03 0%, #78350f 50%, #b45309 100%);
+      border: 1px solid #f59e0b;
+      box-shadow: 0 0 10px rgba(245, 158, 11, 0.25);
+    }
+    .ranking-item.rank-1 .rank-badge {
+      background: linear-gradient(135deg, #fef08a, #f59e0b);
+      color: #000;
+      font-size: 18px;
+    }
+
+    .ranking-item.rank-2 {
+      background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+      border: 1px solid #94a3b8;
+    }
+    .ranking-item.rank-2 .rank-badge {
+      background: linear-gradient(135deg, #f1f5f9, #94a3b8);
+      color: #000;
+      font-size: 18px;
+    }
+
+    .ranking-item.rank-3 {
+      background: linear-gradient(135deg, #2a1a15 0%, #451a03 100%);
+      border: 1px solid #b45309;
+    }
+    .ranking-item.rank-3 .rank-badge {
+      background: linear-gradient(135deg, #fed7aa, #d97706);
+      color: #000;
+      font-size: 18px;
+    }
+
+    .ranking-user { display: flex; align-items: center; gap: 10px; }
+    .ranking-name { font-weight: bold; font-size: 14px; color: #f8fafc; }
+    .ranking-score-box { text-align: right; }
+    .ranking-main-score { font-size: 15px; font-weight: bold; color: #facc15; }
+    .ranking-sub-score { font-size: 11px; color: #aaa; }
+
+    /* 保存サマリー・回数券台帳・ランキング拡張スタイル */
+    .summary-stat-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 14px 0; }
+    .summary-stat-box { background: #252525; border: 1px solid #333; border-radius: 10px; padding: 12px 4px; text-align: center; }
+    .summary-stat-label { font-size: 11px; color: #aaa; margin-bottom: 6px; }
+    .summary-stat-value { font-size: 18px; font-weight: bold; }
+    .summary-arrow-row { display:flex; align-items:center; justify-content:center; gap:10px; margin: 10px 0; font-size: 20px; color:#555; }
+    .summary-arrow-row .box { flex:1; background:#252525; border:1px solid #333; border-radius:10px; padding:14px 4px; text-align:center; }
+    .summary-arrow-row .box .lbl { font-size: 11px; color:#aaa; margin-bottom:4px; }
+    .summary-arrow-row .box .val { font-size: 20px; font-weight:bold; }
+
+    .ledger-chart-wrap { width: 100%; height: 160px; margin: 6px 0 4px 0; }
+    .ledger-month-summary { display:flex; gap:10px; font-size:11px; margin-top:2px; }
+    .ledger-in-tag { color:#4ade80; }
+    .ledger-out-tag { color:#f87171; }
+    .ledger-event {
+      display:flex; justify-content:space-between; align-items:center;
+      padding: 8px 4px; border-bottom: 1px dashed #2d2d2d; font-size:12px;
+    }
+    .ledger-event:last-child { border-bottom: none; }
+    .ledger-type-badge { display:inline-block; width:22px; height:22px; border-radius:50%; text-align:center; line-height:22px; font-size:12px; margin-right:6px; flex-shrink:0; }
+    .ledger-type-badge.in { background: rgba(74, 222, 128, 0.15); color:#4ade80; border:1px solid #16a34a; }
+    .ledger-type-badge.out { background: rgba(248, 113, 113, 0.15); color:#f87171; border:1px solid #dc2626; }
+    .ledger-amount.in { color:#4ade80; font-weight:bold; }
+    .ledger-amount.out { color:#f87171; font-weight:bold; }
+    .ledger-balance { font-size:10px; color:#888; margin-top:2px; }
+
+    /* =========================================================
+       アバター＆アチーブメント（バッジ）重ね配置用スタイル
+       ========================================================= */
+    .avatar-wrapper {
+      position: relative;
+      display: inline-block;
+      flex-shrink: 0;
+    }
+
+    /* 1. マイページ用アバター (52px) */
+    .mypage-avatar-btn {
+      width: 52px; height: 52px; border-radius: 50%; background:#252525; border:1px solid #444;
+      font-size: 26px; display:flex; align-items:center; justify-content:center; cursor:pointer; flex-shrink:0;
+    }
+    .avatar-wrapper.mypage .equipped-badge {
+      position: absolute;
+      bottom: -2px;
+      right: -2px;
+      font-size: 15px;
+      background: #1e1e1e;
+      border: 1px solid #444;
+      border-radius: 50%;
+      width: 22px;
+      height: 22px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.5);
+    }
+
+    /* 2. スコア入力一覧用アバター (36px) */
+    .score-avatar {
+      width: 36px; height: 36px; border-radius: 50%; background:#252525; border:1px solid #444;
+      font-size: 18px; font-weight:bold; display:flex; align-items:center; justify-content:center;
+      flex-shrink:0; color:#e2e8f0;
+    }
+    .avatar-wrapper.score .equipped-badge {
+      position: absolute;
+      bottom: -2px;
+      right: -2px;
+      font-size: 11px;
+      background: #1e1e1e;
+      border: 1px solid #444;
+      border-radius: 50%;
+      width: 16px;
+      height: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.5);
+    }
+
+    /* 3. ランキング用アバター (36px) */
+    .ranking-avatar {
+      width: 36px; height: 36px; border-radius: 50%;
+      background: linear-gradient(135deg, #334155, #1e293b);
+      display:flex; align-items:center; justify-content:center;
+      font-size: 18px; font-weight:bold; color:#e2e8f0; flex-shrink:0;
+      border: 1px solid #475569;
+    }
+    .ranking-item.rank-1 .ranking-avatar { background: linear-gradient(135deg, #fde68a, #d97706); color:#3f1d00; border-color:#f59e0b; }
+    .ranking-item.rank-2 .ranking-avatar { background: linear-gradient(135deg, #e2e8f0, #94a3b8); color:#1e293b; border-color:#94a3b8; }
+    .ranking-item.rank-3 .ranking-avatar { background: linear-gradient(135deg, #fed7aa, #b45309); color:#3f1d00; border-color:#b45309; }
+    
+    .avatar-wrapper.ranking .equipped-badge {
+      position: absolute;
+      bottom: -2px;
+      right: -2px;
+      font-size: 11px;
+      background: #1e1e1e;
+      border: 1px solid #444;
+      border-radius: 50%;
+      width: 16px;
+      height: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.5);
+    }
+
+    .ranking-empty { text-align:center; color:#666; font-size:12px; padding: 14px 0; }
+    .ranking-crown { position:absolute; margin-left:-6px; margin-top:-22px; font-size:14px; }
+
+    /* アバター選択画面 */
+    .avatar-picker-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 8px; margin-top: 10px; }
+    .avatar-picker-item {
+      font-size: 22px; text-align:center; padding: 8px 0; background:#252525; border:1px solid #333;
+      border-radius: 8px; cursor:pointer;
+    }
+    .avatar-picker-item.selected { border: 2px solid #38bdf8; background: rgba(56,189,248,0.15); }
+
+    /* スマホ最適化: 狭幅端末でのグリッド調整 */
+    @media (max-width: 360px) {
+      .achievement-grid { grid-template-columns: repeat(3, 1fr); }
+      .avatar-picker-grid { grid-template-columns: repeat(5, 1fr); }
+      .balance-grid, .summary-stat-grid { grid-template-columns: repeat(3, 1fr); gap: 6px; }
+    }
+ </style>
+</head>
+<body>
+
+  <!-- ヘッダー -->
+  <div class="header">
+    <div class="header-title"><img src="data:image/png;base64,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" alt="OMB - Oshima Monday Bowling" style="height:28px; display:block;"></div>
+    <div>
+      <span id="mode-label" class="badge badge-gray">閲覧モード</span>
+      <button id="admin-login-btn" class="btn btn-secondary btn-sm" onclick="showModal('modal-admin')">管理者認証</button>
+      <button class="btn btn-secondary btn-sm admin-only" onclick="openAdminSettings()">⚙️</button>
+      <button class="btn btn-secondary btn-sm admin-only" onclick="logoutAdmin()">ログアウト</button>
+    </div>
+  </div>
+
+  <div class="container">
+    <div id="loading">
+      <div class="loading-spinner"></div>
+      <div style="color: #ccc; font-size: 13px;">データを読み込んでいます...</div>
+    </div>
+
+    <!-- 1. スコア入力タブ -->
+    <div id="tab-score" class="tab-content" style="display: none;">
+      <div id="alert-area"></div>
+
+      <div class="card">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 8px;">
+          <label style="font-size: 13px; font-weight: bold;">実施日: <input type="date" id="score-date"></label>
+          <button class="btn btn-primary btn-sm admin-only" onclick="showAddMemberModal()">+ メンバー追加</button>
+        </div>
+        <div style="display: flex; align-items: center; gap: 6px; font-size: 12px; color: #aaa;">
+          <input type="checkbox" id="hide-absent-toggle" onchange="applyHideAbsentFilter()">
+          <label for="hide-absent-toggle">不参加メンバーを非表示にする</label>
+        </div>
+      </div>
+
+      <div id="score-member-list"></div>
+      
+      <button class="btn btn-success btn-block" style="margin-top: 10px; margin-bottom: 8px;" onclick="submitScores()">一括保存する</button>
+      <button class="btn btn-secondary btn-block" style="margin-bottom: 20px;" onclick="showModal('modal-history-view')">📜 スコア履歴を見る</button>
+    </div>
+
+    <!-- 2. 回数券残量タブ（収支ダッシュボード付き） -->
+    <div id="tab-vault" class="tab-content" style="display: none;">
+      <div class="card">
+        <h4 style="margin: 0 0 8px 0; color: #38bdf8;">🎟️ 回数券 収支ダッシュボード</h4>
+        <div class="balance-grid">
+          <div class="balance-box">
+            <div style="font-size: 11px; color: #aaa;">総入荷 (＋)</div>
+            <div class="balance-val" id="vault-in" style="color: #4ade80;">0 G</div>
+          </div>
+          <div class="balance-box">
+            <div style="font-size: 11px; color: #aaa;">総消費 (－)</div>
+            <div class="balance-val" id="vault-out" style="color: #f87171;">0 G</div>
+          </div>
+          <div class="balance-box">
+            <div style="font-size: 11px; color: #aaa;">現在プール残高</div>
+            <div class="balance-val" id="vault-games" style="color: #38bdf8;">0 G</div>
+          </div>
+        </div>
+        <p style="font-size: 12px; margin: 10px 0 0 0; color: #aaa; text-align: right;">在籍メンバー数: <span id="vault-members">0</span> 名</p>
+      </div>
+
+      <div class="card">
+        <h4 style="margin: 0 0 8px 0; color: #f87171;">⚠️ 残数少メンバー（残り3G以下）</h4>
+        <div id="low-balance-container" style="font-size: 13px;"></div>
+      </div>
+
+      <div class="card">
+        <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom: 8px;">
+          <h4 style="margin: 0; color:#e0e0e0;">📊 残高推移グラフ（入り＋／消化－）</h4>
+          <select id="vault-chart-filter" onchange="renderVaultChart()" style="font-size:12px;">
+            <option value="all">通算</option>
+            <option value="year">今年</option>
+            <option value="quarter">今四半期</option>
+            <option value="month">今月</option>
+          </select>
+        </div>
+        <div class="ledger-chart-wrap"><canvas id="vaultBalanceChart"></canvas></div>
+      </div>
+
+      <div class="card">
+        <h4 style="margin: 0 0 8px 0;">📋 回数券 入出履歴 (月別)</h4>
+        <p style="font-size:11px; color:#888; margin:-4px 0 8px 0;">🟢 入り＝回数券購入 🔴 出＝その日の消化ゲーム数</p>
+        <div id="vault-accordion-container"></div>
+      </div>
+    </div>
+
+    <!-- 3. ランキングタブ -->
+    <div id="tab-ranking" class="tab-content" style="display: none;">
+      <div class="card">
+        <div style="margin-bottom: 12px; font-size: 13px; display: flex; align-items: center; gap: 8px;">
+          <label>集計期間: </label>
+          <select id="ranking-filter" onchange="renderRanking()">
+            <option value="all">通算（歴代）</option>
+            <option value="year">今年</option>
+            <option value="quarter">今四半期</option>
+            <option value="month" selected>今月</option>
+          </select>
+        </div>
+        <p style="font-size:11px; color:#666; margin: -4px 0 10px 0;">👆 各ランキングのタイトルをタップすると集計方法の説明が見られます</p>
+
+        <div class="ranking-section">
+          <div class="ranking-section-title" onclick="showRankingInfo('avg')">🥇 アベレージランキング <span style="font-size:11px; color:#666;">ℹ️</span></div>
+          <div id="ranking-avg" class="ranking-list"></div>
+        </div>
+
+        <div class="ranking-section">
+          <div class="ranking-section-title" onclick="showRankingInfo('g3')">🔥 3G合計スコアランキング <span style="font-size:11px; color:#666;">ℹ️</span></div>
+          <div id="ranking-3g" class="ranking-list"></div>
+        </div>
+
+        <div class="ranking-section">
+          <div class="ranking-section-title" onclick="showRankingInfo('high')">👑 ハイスコア(1G)ランキング <span style="font-size:11px; color:#666;">ℹ️</span></div>
+          <div id="ranking-high" class="ranking-list"></div>
+        </div>
+
+        <div class="ranking-section">
+          <div class="ranking-section-title" onclick="showRankingInfo('games')">🎳 投球ゲーム数ランキング <span style="font-size:11px; color:#666;">ℹ️</span></div>
+          <div id="ranking-games" class="ranking-list"></div>
+        </div>
+
+        <div class="ranking-section">
+          <div class="ranking-section-title" onclick="showRankingInfo('gapMax')">🎢 最多ギャップランキング <span style="font-size:11px; color:#666;">ℹ️</span></div>
+          <div id="ranking-gap-max" class="ranking-list"></div>
+        </div>
+
+        <div class="ranking-section">
+          <div class="ranking-section-title" onclick="showRankingInfo('gapMin')">🎯 最小ギャップランキング <span style="font-size:11px; color:#666;">ℹ️</span></div>
+          <div id="ranking-gap-min" class="ranking-list"></div>
+        </div>
+
+        <div class="ranking-section" id="ranking-section-mip">
+          <div class="ranking-section-title" onclick="showRankingInfo('mip')">🚀 急成長(MIP)ランキング <span style="font-size:11px; color:#666;">ℹ️</span></div>
+          <div id="ranking-mip" class="ranking-list"></div>
+        </div>
+
+        <div class="ranking-section">
+          <div class="ranking-section-title" onclick="showRankingInfo('giant')">⚔️ ジャイアントキリングランキング <span style="font-size:11px; color:#666;">ℹ️</span></div>
+          <div id="ranking-giant" class="ranking-list"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 4. メンバータブ（管理者専用） -->
+    <div id="tab-members" class="tab-content" style="display: none;">
+      <div class="card" id="member-management-list"></div>
+    </div>
+  </div>
+
+  <!-- 下部固定ナビゲーション -->
+  <div class="bottom-nav">
+    <button id="tab-btn-score" class="active" onclick="switchTab('tab-score')">
+      <span class="nav-icon">📝</span><span>スコア入力</span>
+    </button>
+    <button id="tab-btn-ranking" onclick="switchTab('tab-ranking')">
+      <span class="nav-icon">🏆</span><span>ランキング</span>
+    </button>
+    <button id="tab-btn-vault" onclick="switchTab('tab-vault')">
+      <span class="nav-icon">🎟️</span><span>回数券残量</span>
+    </button>
+    <button id="tab-btn-members" class="admin-only" onclick="switchTab('tab-members')">
+      <span class="nav-icon">👥</span><span>メンバー</span>
+    </button>
+  </div>
+
+  <div id="toast-container"></div>
+
+  <!-- モーダルダイアログ群 -->
+  <div id="modal-admin" class="modal">
+    <div class="modal-content">
+      <h3 style="margin-top:0;">管理者認証</h3>
+      <input type="password" id="admin-pass" placeholder="パスワード" style="width: 100%; margin-bottom: 15px;">
+      <div style="text-align: right; display: flex; gap: 8px; justify-content: flex-end;">
+        <button class="btn btn-secondary" onclick="closeModal('modal-admin')">キャンセル</button>
+        <button class="btn btn-primary" onclick="loginAdmin()">認証</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="modal-ranking-info" class="modal" style="z-index: 1600;">
+    <div class="modal-content" style="max-width: 340px;">
+      <h3 id="ranking-info-title" style="margin-top:0;"></h3>
+      <p id="ranking-info-desc" style="font-size: 13px; color: #ccc; background:#252525; padding:10px; border-radius:8px; line-height:1.6;"></p>
+      <div style="text-align: right; margin-top: 12px;">
+        <button class="btn btn-secondary" onclick="closeModal('modal-ranking-info')">閉じる</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="modal-admin-settings" class="modal">
+    <div class="modal-content">
+      <h3 style="margin-top:0;">⚙️ 管理者設定</h3>
+
+      <div style="background:#252525; padding:10px; border-radius:8px; margin-bottom:14px;">
+        <p style="font-size:13px; font-weight:bold; margin:0 0 8px 0;">🔑 管理者パスワード変更</p>
+        <p style="font-size:12px;">現在のパスワード: <input type="password" id="admin-pass-old" style="width:100%;"></p>
+        <p style="font-size:12px;">新しいパスワード: <input type="password" id="admin-pass-new" style="width:100%;"></p>
+        <button class="btn btn-primary btn-sm" style="margin-top:6px;" onclick="submitChangeAdminPassword()">パスワードを変更</button>
+      </div>
+
+      <div style="background:#252525; padding:10px; border-radius:8px;">
+        <p style="font-size:13px; font-weight:bold; margin:0 0 8px 0;">🎟️ 回数券 単価・冊数設定</p>
+        <p style="font-size:12px;">1冊あたりの金額(円): <input type="number" id="settings-price-per-pack" style="width:100%;"></p>
+        <p style="font-size:12px;">1冊あたりのゲーム数: <input type="number" id="settings-games-per-pack" style="width:100%;"></p>
+        <p style="font-size:11px; color:#888; margin:2px 0 6px 0;">※ 変更は今後の新規購入分にのみ適用され、過去の履歴は変わりません。</p>
+        <p style="font-size:12px;">確認のため管理者パスワード: <input type="password" id="settings-confirm-pass" style="width:100%;"></p>
+        <button class="btn btn-primary btn-sm" style="margin-top:6px;" onclick="submitPackSettings()">設定を更新</button>
+      </div>
+
+      <div style="text-align: right; margin-top: 15px;">
+        <button class="btn btn-secondary" onclick="closeModal('modal-admin-settings')">閉じる</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="modal-edit-score" class="modal">
+    <div class="modal-content">
+      <h3 style="margin-top:0;">✏️ スコア記録の編集</h3>
+      <input type="hidden" id="edit-score-id">
+
+      <p style="font-size: 13px;">対象プレイヤー（選び間違いの修正もこちらから）:
+        <select id="edit-score-member-id" style="width:100%; margin-top:4px;"></select>
+      </p>
+
+      <p style="font-size: 13px;">日付: <input type="date" id="edit-score-date"></p>
+      <p style="font-size: 13px;">投球G数: 
+        <select id="edit-score-gc" onchange="updateEditGameSlots()" style="padding:2px 4px;">
+          <option value="1">1 G</option>
+          <option value="2">2 G</option>
+          <option value="3">3 G</option>
+          <option value="4">4 G</option>
+          <option value="5">5 G</option>
+        </select>
+      </p>
+
+      <div class="input-grid" id="edit-score-grid" style="margin-top: 10px;">
+        <div class="input-box-wrap"><label>1G</label><input type="number" id="edit-score-g1" class="input-box" placeholder="0"></div>
+        <div class="input-box-wrap"><label>2G</label><input type="number" id="edit-score-g2" class="input-box" placeholder="0"></div>
+        <div class="input-box-wrap"><label>3G</label><input type="number" id="edit-score-g3" class="input-box" placeholder="0"></div>
+        <div class="input-box-wrap hidden-slot" id="edit-score-g4-wrap"><label>4G</label><input type="number" id="edit-score-g4" class="input-box" placeholder="0"></div>
+        <div class="input-box-wrap hidden-slot" id="edit-score-g5-wrap"><label>5G</label><input type="number" id="edit-score-g5" class="input-box" placeholder="0"></div>
+      </div>
+
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-top: 15px;">
+        <button class="btn btn-danger btn-sm admin-only" onclick="executeDeleteScore()">🗑️ この記録を削除</button>
+        <div style="display:flex; gap: 8px;">
+          <button class="btn btn-secondary" onclick="closeModal('modal-edit-score')">キャンセル</button>
+          <button class="btn btn-success admin-only" onclick="submitUpdateScore()">更新保存</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="modal-add-member" class="modal">
+    <div class="modal-content">
+      <h3 style="margin-top:0;">新規メンバー登録</h3>
+      <input type="text" id="new-member-name" placeholder="氏名を入力" style="width: 100%; margin-bottom: 15px;">
+      <div style="text-align: right; display: flex; gap: 8px; justify-content: flex-end;">
+        <button class="btn btn-secondary" onclick="closeModal('modal-add-member')">キャンセル</button>
+        <button class="btn btn-success" onclick="submitAddMember()">登録</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="modal-edit-member" class="modal">
+    <div class="modal-content">
+      <h3 style="margin-top:0;">メンバー編集</h3>
+      <input type="hidden" id="edit-member-id">
+      <p style="font-size: 13px; margin-bottom: 4px;">氏名変更:</p>
+      <input type="text" id="edit-member-name" style="width: 100%; margin-bottom: 15px;">
+      <div style="display:flex; justify-content: space-between; align-items: center;">
+        <button class="btn btn-danger btn-sm admin-only" onclick="executeDeleteMember()">退会処理</button>
+        <div style="display:flex; gap: 8px;">
+          <button class="btn btn-secondary" onclick="closeModal('modal-edit-member')">キャンセル</button>
+          <button class="btn btn-success admin-only" onclick="submitUpdateMember()">保存</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="modal-charge" class="modal">
+    <div class="modal-content">
+      <h3 id="charge-modal-title" style="margin-top:0;">🎟️ 回数券の追加・返却</h3>
+      <input type="hidden" id="charge-id">
+      <input type="hidden" id="charge-member-id">
+      <p id="charge-target-name" style="font-weight: bold; margin-bottom: 8px; color: #38bdf8;"></p>
+      <p style="font-size: 13px;">日付: <input type="date" id="charge-date"></p>
+
+      <div style="background: #252525; padding: 16px 12px; border-radius: 8px; margin: 12px 0; text-align: center;">
+        <div style="font-size: 11px; color: #aaa; margin-bottom: 4px;">合計金額</div>
+        <div style="font-size: 30px; font-weight: bold; color:#4ade80; line-height:1.2;">
+          ¥<span id="charge-total-price">3,000</span>
+        </div>
+        <div style="font-size: 12px; color:#aaa; margin-top: 4px;">
+          <span id="charge-packs-display" style="color:#facc15; font-weight:bold;">1</span> 冊
+          （<span id="charge-games-display">11</span> G相当）
+        </div>
+
+        <div style="display:flex; align-items:center; justify-content:center; gap:16px; margin-top: 14px;">
+          <button class="btn btn-secondary btn-step" onclick="decrementChargePack()">－</button>
+          <span style="font-size:12px; color:#666;">1冊単位で増減</span>
+          <button class="btn btn-primary btn-step" onclick="incrementChargePack()">＋</button>
+        </div>
+        <p style="font-size: 11px; color: #f87171; margin: 10px 0 0 0;">※ 退会等での返却時はマイナスまで減らして保存してください</p>
+        <button class="btn btn-secondary btn-sm" onclick="resetChargePack()" style="margin-top: 8px;">1冊にリセット</button>
+      </div>
+
+      <p style="font-size: 13px;">備考: <input type="text" id="charge-note" placeholder="メモ（返却理由など）" style="width: 100%;"></p>
+      <div style="text-align: right; margin-top: 15px; display: flex; gap: 8px; justify-content: flex-end;">
+        <button class="btn btn-secondary" onclick="closeModal('modal-charge')">キャンセル</button>
+        <button class="btn btn-success admin-only" onclick="submitCharge()">保存</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="modal-mypage" class="modal">
+    <div class="modal-content">
+      <!-- 1. 名前 -->
+      <div style="display:flex; align-items:center; gap:12px; margin-bottom: 12px;">
+        <div class="avatar-wrapper mypage" onclick="showAvatarPicker()" title="タップしてアバター変更">
+          <div class="mypage-avatar-btn" id="mypage-avatar-btn"></div>
+          <span id="mypage-equipped-badge" class="equipped-badge" style="display:none;"></span>
+        </div>
+        <h3 id="mypage-name" style="margin:0;"></h3>
+      </div>
+
+      <!-- 2. 絞り込み -->
+      <div style="background: #1e293b; padding: 10px; border-radius: 8px; margin-bottom: 12px;">
+        <div style="font-size: 12px; color: #94a3b8; margin-bottom: 6px;">📅 期間絞り込み</div>
+        <div style="display: flex; gap: 6px; align-items: center; flex-wrap: wrap;">
+          <input type="date" id="mypage-filter-start" onchange="renderMyPageData()" style="padding: 4px; font-size: 12px; background: #0f172a; color: #fff; border: 1px solid #334155; border-radius: 4px;">
+          <span style="color: #94a3b8; font-size: 12px;">～</span>
+          <input type="date" id="mypage-filter-end" onchange="renderMyPageData()" style="padding: 4px; font-size: 12px; background: #0f172a; color: #fff; border: 1px solid #334155; border-radius: 4px;">
+          <button class="btn btn-secondary btn-sm" onclick="clearGraphDateFilter()">クリア</button>
+        </div>
+      </div>
+
+      <!-- 3. ランキング -->
+      <div style="background: #252525; border: 1px solid #333; border-radius: 8px; padding: 10px; margin-bottom: 12px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; cursor:pointer;" onclick="toggleMyPageRanking()">
+          <div style="font-size: 13px; font-weight: bold;">
+            🏅 ランキング <span id="mypage-ranking-summary" style="color:#facc15; font-size: 12px;"></span>
+          </div>
+          <button class="btn btn-secondary btn-sm" onclick="event.stopPropagation(); toggleMyPageRanking();" id="toggle-ranking-btn">詳細を見る ▼</button>
+        </div>
+        <div id="mypage-ranking-full" style="display: none; margin-top: 10px; border-top: 1px dashed #444; padding-top: 8px;">
+          <select id="mypage-ranking-filter" onchange="renderMyPageRankingDetail()" style="font-size:12px; margin-bottom: 8px; width: 100%;">
+            <option value="month" selected>今月</option>
+            <option value="quarter">今四半期</option>
+            <option value="year">今年</option>
+            <option value="all">通算</option>
+          </select>
+          <div id="mypage-ranking-list" style="font-size: 12px;"></div>
+        </div>
+      </div>
+
+      <!-- 4. スコア -->
+      <div style="background: #252525; padding: 10px; border-radius: 8px; margin-bottom: 12px; font-size: 13px;">
+        <div style="display:flex; justify-content:space-between; margin-bottom: 4px;">
+          <span>通算アベレージ:</span><strong id="mypage-avg-total"></strong>
+        </div>
+        <div style="display:flex; justify-content:space-between; margin-bottom: 4px;">
+          <span>直近15Gアベレージ:</span><strong id="mypage-avg-recent" style="color:#facc15;"></strong>
+        </div>
+        <div style="display:flex; justify-content:space-between;">
+          <span>最高スコア:</span><strong id="mypage-high"></strong>
+        </div>
+      </div>
+
+      <!-- 5. 過去のスコア履歴 -->
+      <div style="background: #252525; border: 1px solid #333; border-radius: 8px; padding: 10px; margin-bottom: 12px;">
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+          <div>
+            <div style="font-size: 13px; font-weight: bold;">
+              📜 過去のスコア履歴 <span id="mypage-history-count" style="color:#38bdf8; font-size: 12px;"></span>
+            </div>
+            <div style="font-size: 11px; color: #facc15; margin-top: 2px;">
+              期間内Avg: <strong id="mypage-history-avg">-</strong>
+            </div>
+          </div>
+          <button class="btn btn-secondary btn-sm" onclick="toggleMyPageHistory()" id="toggle-history-btn">表示する ▼</button>
+        </div>
+        <div id="mypage-history-full" style="display: none; margin-top: 10px; border-top: 1px dashed #444; padding-top: 8px; max-height: 200px; overflow-y: auto;">
+          <div id="mypage-history-list"></div>
+        </div>
+      </div>
+
+      <!-- 6. スコア推移グラフ -->
+      <div style="display:flex; justify-content:space-between; align-items:center; margin: 15px 0 6px 0;">
+        <h4 style="margin: 0; font-size: 14px;">📈 スコア推移グラフ</h4>
+        <select id="chart-unit-select" onchange="renderMyPageData()" style="padding:2px 6px; font-size:11px;">
+          <option value="day" selected>日単位</option>
+          <option value="month">月単位</option>
+          <option value="quarter">四半期単位</option>
+          <option value="year">年単位</option>
+        </select>
+      </div>
+      <div style="width: 100%; height: 180px;">
+        <canvas id="scoreChart"></canvas>
+      </div>
+
+      <!-- 7. 称号・実績 -->
+      <div style="background: #252525; border: 1px solid #333; border-radius: 8px; padding: 10px; margin-top: 15px;">
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+          <div style="font-size: 13px; font-weight: bold;">
+            🏆 称号・実績 <span id="mypage-ach-count" style="color:#38bdf8; font-size: 12px;"></span>
+          </div>
+          <button class="btn btn-secondary btn-sm" onclick="toggleAchievementList()" id="toggle-ach-btn">一覧を見る ▼</button>
+        </div>
+        <div id="mypage-ach-summary" style="margin-top: 6px; font-size: 12px; color: #aaa;"></div>
+        <div id="mypage-ach-full" style="display: none; margin-top: 10px; border-top: 1px dashed #444; padding-top: 8px;">
+          <div id="mypage-badges" class="achievement-grid"></div>
+        </div>
+      </div>
+
+      <div style="text-align: right; margin-top: 15px;">
+        <button class="btn btn-secondary" onclick="closeModal('modal-mypage')">閉じる</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="modal-history-view" class="modal">
+    <div class="modal-content">
+      <h3 style="margin-top:0;">📜 スコア記録履歴</h3>
+      <div id="history-list-container" style="max-height: 60vh; overflow-y: auto;"></div>
+      <div style="text-align: right; margin-top: 15px;">
+        <button class="btn btn-secondary" onclick="closeModal('modal-history-view')">閉じる</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="modal-save-summary" class="modal">
+    <div class="modal-content" style="text-align:center;">
+      <h3 style="margin-top:0;">✅ 保存が完了しました</h3>
+      <div class="summary-stat-box" style="margin-bottom: 10px;">
+        <div class="summary-stat-label">本日の総ゲーム数</div>
+        <div class="summary-stat-value" id="summary-total-games" style="color:#38bdf8;">0 G</div>
+      </div>
+      <div class="summary-arrow-row">
+        <div class="box">
+          <div class="lbl">引く前ストック</div>
+          <div class="val" id="summary-pool-before" style="color:#cbd5e1;">0 G</div>
+        </div>
+        <span>➔</span>
+        <div class="box">
+          <div class="lbl">引いた後ストック</div>
+          <div class="val" id="summary-pool-after" style="color:#facc15;">0 G</div>
+        </div>
+      </div>
+      <div style="text-align: right; margin-top: 10px;">
+        <button class="btn btn-secondary" onclick="closeModal('modal-save-summary')">閉じる</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="modal-avatar-picker" class="modal" style="z-index: 1600;">
+    <div class="modal-content" style="max-width: 340px;">
+      <h3 style="margin-top:0;">🖼️ アバターを選択</h3>
+      <div id="avatar-picker-grid" class="avatar-picker-grid"></div>
+      <div style="text-align: right; margin-top: 15px;">
+        <button class="btn btn-secondary" onclick="closeModal('modal-avatar-picker')">閉じる</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="modal-achievement-detail" class="modal" style="z-index: 1600;">
+    <div class="modal-content" style="text-align: center; max-width: 320px;">
+      <span id="ach-detail-icon" style="font-size: 48px; display: block; margin-bottom: 8px;"></span>
+      <h3 id="ach-detail-title" style="margin: 0 0 4px 0;"></h3>
+      <span id="ach-detail-status" class="badge" style="margin-bottom: 12px;"></span>
+      <p id="ach-detail-desc" style="font-size: 13px; color: #aaa; margin: 10px 0; text-align: left; background: #252525; padding: 10px; border-radius: 6px;"></p>
+      
+      <div style="display:flex; gap:8px; justify-content:center; margin-top: 15px;">
+        <button class="btn btn-secondary" onclick="closeModal('modal-achievement-detail')">閉じる</button>
+        <button id="ach-equip-btn" class="btn btn-success" style="display:none;" onclick="equipCurrentAchievement()">この称号を装備する</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let appData = {};
+    let isAdmin = false;
+    let scoreChartInstance = null;
+    let currentMyPageMemberId = null;
+    let selectedAchievementId = null;
+    let currentPacksCount = 1;
+
+    // 全32種類のアチーブメント定義
+    const ACHIEVEMENTS = [
+      // 初心者・単発スコア系
+      { id: 'first', icon: '🌱', name: 'デビュー', desc: '初めてスコアを記録した' },
+      { id: 'score150', icon: '⭐', name: '150UP', desc: '1Gで150点以上を記録した' },
+      { id: 'score200', icon: '👑', name: '200UP', desc: '1Gで200点以上を記録した' },
+      { id: 'score230', icon: '⚡', name: '230UP', desc: '1Gで230点以上を記録した' },
+      { id: 'score250', icon: '🔥', name: '250UP', desc: '1Gで250点以上を記録した' },
+      { id: 'score300', icon: '🎆', name: 'パーフェクト', desc: '1Gで300点満点を記録した' },
+
+      // 通算投球ゲーム数系
+      { id: 'g10', icon: '🎳', name: '常連ボウラー', desc: '通算10ゲーム以上投球した' },
+      { id: 'g50', icon: '🥉', name: 'ベテラン', desc: '通算50ゲーム以上投球した' },
+      { id: 'g100', icon: '🥈', name: '鉄人ボウラー', desc: '通算100ゲーム以上投球した' },
+      { id: 'g250', icon: '🥇', name: '超絶ボウラー', desc: '通算250ゲーム以上投球した' },
+      { id: 'g500', icon: '💎', name: 'ボウリングの鬼', desc: '通算500ゲーム以上投球した' },
+      { id: 'g1000', icon: '🌌', name: '生きる伝説', desc: '通算1000ゲーム以上投球した' },
+
+      // 直近15Gアベレージ系
+      { id: 'avg150', icon: '📈', name: '安定型', desc: '直近15Gアベレージが150点以上 (15G以上投球)' },
+      { id: 'avg180', icon: '🎯', name: '上級ボウラー', desc: '直近15Gアベレージが180点以上 (15G以上投球)' },
+      { id: 'avg200', icon: '🏅', name: 'エキスパート', desc: '直近15Gアベレージが200点以上 (15G以上投球)' },
+      { id: 'avg210', icon: '🎖️', name: 'マスター', desc: '直近15Gアベレージが210点以上 (15G以上投球)' },
+      { id: 'avg220', icon: '🔱', name: 'グランドマスター', desc: '直近15Gアベレージが220点以上 (15G以上投球)' },
+      { id: 'avg230', icon: '👑', name: '神の領域', desc: '直近15Gアベレージが230点以上 (15G以上投球)' },
+
+      // 3G合計スコア系
+      { id: 'p400', icon: '🥉', name: '3G 400UP', desc: '1回の参加(3G)で合計400点以上獲得' },
+      { id: 'p500', icon: '🥈', name: '3G 500UP', desc: '1回の参加(3G)で合計500点以上獲得' },
+      { id: 'p600', icon: '🥇', name: '3G 600UP', desc: '1回の参加(3G)で合計600点以上獲得' },
+      { id: 'p700', icon: '🌟', name: '3G 700UP', desc: '1回の参加(3G)で合計700点以上獲得' },
+      { id: 'p800', icon: '💥', name: '3G 800UP', desc: '1回の参加(3G)で合計800点以上獲得' },
+      { id: 'p900', icon: '🌠', name: '3G 900UP', desc: '1回の参加(3G)でオールパーフェクト(900点)' },
+
+      // 回数券購入系
+      { id: 'pack3', icon: '🎟️', name: 'お得意様', desc: '通算3冊以上回数券を購入した' },
+      { id: 'pack10', icon: '💳', name: '太客ボウラー', desc: '通算10冊以上回数券を購入した' },
+      { id: 'pack50', icon: '🧱', name: 'スポンサー', desc: '通算50冊以上回数券を購入した' },
+      { id: 'pack100', icon: '🏛️', name: 'オーナー', desc: '通算100冊以上回数券を購入した' },
+      { id: 'pack200', icon: '🏰', name: 'ボウリング場買収', desc: '通算200冊以上回数券を購入した' },
+
+      // 特殊・ネタ系
+      { id: 'zorome', icon: '🎰', name: 'ゾロ目賞', desc: '1Gのスコアでゾロ目(111, 222等)を出した' },
+      { id: 'split', icon: '🎯', name: 'ぴったり100', desc: '1Gでジャスト100点を記録した' }
+    ];
+
+const AVATAR_OPTIONS = [
+  // --- 1. 表情・顔芸・カオスな感情 (100) ---
+  '😀', '😃', '😄', '😁', '😆', '😅', '🤣', '😂', '🙂', '🙃',
+  '🫠', '😉', '😊', '😇', '🥰', '😍', '🤩', '😘', '😗', '😚',
+  '😋', '😛', '😜', '🤪', '😝', '🤑', '🤗', '🤭', '🫢', '🫣',
+  '🤫', '🤔', '🫡', '🤐', '🤨', '😐', '😑', '😶', '🫥', '😏',
+  '😒', '🙄', '😬', '🤥', '🫨', '🙂‍↔️', '🙂‍↕️', '😮‍💨', '😤', '🤯',
+  '😱', '😨', '😰', '😥', '😓', '🫣', '🥵', '🥶', '😵', '😵‍💫',
+  '🥴', '😲', '😳', '🥺', '🥹', '😦', '😧', '📁', '🤡', '👺',
+  '👹', '👿', '😈', '🤠', '🥸', '🥳', '😎', '🤓', '🧐', '💀',
+  '☠️', '💩', '👻', '👽', '👾', '🤖', '🎃', '😺', '😸', '😹',
+  '😻', '😼', '😽', '🙀', '😿', '😾', '🙈', '🙉', '🙊', '👀',
+
+  // --- 2. 異形・怪異・都市伝説・キャラクター (100) ---
+  '👁️', '🧠', '🦴', '🦷', '🗣️', '👤', '👥', '🫂', '👶', '👧',
+  '🧒', '👦', '👩', '🧑', '👨', '👩‍🦱', '🧑‍🦱', '👨‍🦱', '👩‍🦰', '🧑‍🦰',
+  '👨‍🦰', '👱‍♀️', '👱', '👱‍♂️', '👩‍🦳', '🧑‍🦳', '👨‍🦳', '👩‍🦲', '🧑‍🦲', '👨‍🦲',
+  '🧔‍♀️', '🧔‍♂️', '👵', '🧓', '👴', '👲', '👳‍♀️', '👳‍♂️', '🧕', '👮‍♀️',
+  '👮‍♂️', '👷‍♀️', '👷‍♂️', '💂‍♀️', '💂‍♂️', '🕵️‍♀️', '🕵️‍♂️', '👩‍⚕️', '👨‍⚕️', '👩‍🌾',
+  '👨‍🌾', '👩‍🍳', '👨‍🍳', '👩‍🎓', '👨‍🎓', '👩‍🎤', '👨‍🎤', '👩‍🏫', '👨‍🏫', '👩‍🏭',
+  '👨‍🏭', '👩‍💻', '👨‍💻', '👩‍💼', '👨‍💼', '👩‍🔧', '👨‍🔧', '👩‍🔬', '👨‍🔬', '👩‍🎨',
+  '👨‍🎨', '👩‍🚒', '👨‍🚒', '👩‍✈️', '👨‍✈️', '👩‍🚀', '👨‍🚀', '👩‍⚖️', '👨‍⚖️', '👰‍♀️',
+  '👰‍♂️', '🤵‍♀️', '🤵‍♂️', '👸', '🤴', '🥷', '🦸‍♀️', '🦸‍♂️', '🦹‍♀️', '🦹‍♂️',
+  '🧑‍🎄', '🎅', '🤶', '🧙‍♀️', '🧙‍♂️', '🧝‍♀️', '🧝‍♂️', '🧛‍♀️', '🧛‍♂️', '🧜‍♀️',
+
+  // --- 3. 幻想生物・古代生物・マニアックな生き物 (100) ---
+  '🧜‍♂️', '🧚‍♀️', '🧚‍♂️', '🧞‍♀️', '🧞‍♂️', '🧌', '🪨', '🗿', '🐶', '🐱',
+  '🐭', '🐹', '🐰', '🦊', '🐻', '🐼', '🐻‍❄️', '🐨', '🐯', '🦁',
+  '🐮', '🐷', '🐽', '🐸', '🐵', '🙈', '🙉', '🙊', '🐒', '🐔',
+  '🐧', '🐦', '🐤', '🐣', '🐥', '🦆', '🦅', '🦉', '🦇', '🐺',
+  '🐗', '🐴', '🦄', '🐝', '🪱', '🐛', '🦋', '🐌', '🐞', '🐜',
+  '🪰', '🪲', '🪳', '🦟', '🦗', '🕷️', '🕸️', '🦂', '🐢', '🐍',
+  '🦎', '🦖', '🦕', '🐙', '🦑', '🪼', '🦐', '🦞', '🦀', '🐡',
+  '🐠', '🐟', '🐬', '🐳', '🐋', '🦈', '🦭', '🐊', '🐅', '🐆',
+  '🦓', '🦍', '🦧', '🦣', '🐘', '🦛', '🦏', '🐪', '🐫', '🦒',
+  '🦘', '🦬', '🐃', '🐂', '🐄', '🐎', '🐖', '🐏', '🐑', '🦙',
+
+  // --- 4. 奇抜なシュール生物・植物・自然 (100) ---
+  '🐐', '🦌', '🐕', '🐩', '🦮', '🐕‍🦺', '🐈', '🐈‍⬛', '🦤', '🦚',
+  '🦜', '🦩', '🦩', '🕊️', '🦩', '🪿', '🪽', '🪼', '🪸', '🪾',
+  '🦥', '🦦', '🦨', '🦡', '🦔', '🐁', '🐀', '🐿️', '🦫', '🦘',
+  '🦡', '🐾', '🪺', '🪹', '🪨', '🪵', '🌱', '🪴', '🌲', '🌳',
+  '🌴', '🌵', '🌾', '🌿', '☘️', '🍀', '🍁', '🍂', '🍃', '🪻',
+  '🪷', '🌺', '🌻', '🌹', '🥀', '🌷', '🌼', '🌸', '💐', '🍄',
+  '🌰', '🦀', '🦞', '🦐', '🦑', '🐙', '🦪', '🐚', '🪸', '🪼',
+  '🪱', '🐛', '🦋', '🐌', '🐝', '🪲', '🐞', '🪳', '🕷️', '🦂',
+  '☀️', '🌞', '🌁', '🌊', '🌪️', '☃️', '❄️', '🔥', '💥', '✨',
+  '🌟', '💫', '⭐', '🌈', '⚡', '🌙', '🪐', '☄️', '🌌', '🌍',
+
+  // --- 5. ジャンクフード・マニアックな食材 (100) ---
+  '🍏', '🍎', '🍐', '🍊', '🍋', '🍌', '🍉', '🍇', '🍓', '🫐',
+  '🍈', '🍒', '🍑', '🥭', '🍍', '🥥', '🥝', '🍅', '🥑', '🍆',
+  '🥔', '🥕', '🌽', '🌶️', '🫑', '🥒', '🥬', '🥦', '🧄', '🧅',
+  '🍄', '🥜', '🌰', '🍞', '🥐', '🥖', '🫓', '🥨', '🥯', '🥞',
+  '🧇', '🧀', '🍖', '🍗', '🥩', '🥓', '🍔', '🍟', '🍕', '🌭',
+  '🥪', '🌮', '🌯', '🫔', '🥙', '🧆', '🥚', '🍳', '🥘', '🍲',
+  '🫕', '🥣', '🥗', '🍿', '🧈', '🧂', '🥫', '🍱', '🍘', '🍙',
+  '🍚', '🍛', '🍜', '🍝', '🍠', '🍢', '🍣', '🍤', '🍥', '🥮',
+  '🍡', '🥟', '🥠', '🥡', '🍦', '🍧', '🍨', '🍩', '🍪', '🎂',
+  '🍰', '🧁', '🥧', '🍫', '🍬', '🍭', '🍮', '🍯', '🍼', '🥛',
+
+  // --- 6. 謎のドリンク・アルコール・怪しい液体 (100) ---
+  '☕', '🫖', '🍵', '🍶', '🍾', '🍷', '🍸', '🍹', '🍺', '🍻',
+  '🥂', '🥃', '🥤', '🧋', '🧃', '🧉', '🧊', '🥢', '🍽️', '🍴',
+  '🥄', '🔪', '🫙', '🏺', '⚽', '🏀', '🏈', '⚾', '🥎', '🎾',
+  '🏐', '🏉', '🥏', '🎱', '🪀', '🏓', '🏸', '🏒', '👡', '🏹',
+  '🎣', '🤿', '🥊', '🥋', '🎽', '🛹', '🛼', '🛷', '⛸️', '🥌',
+  '🎿', '⛷️', '🏂', '🪂', '🏋️‍♀️', '🏋️‍♂️', '🤼‍♀️', '🤼‍♂️', '🤸‍♀️', '🤸‍♂️',
+  '⛹️‍♀️', '⛹️‍♂️', '🤺', '🤾‍♀️', '🤾‍♂️', '🏌️‍♀️', '🏌️‍♂️', '🏇', '🧘‍♀️', '🧘‍♂️',
+  '🏄‍♀️', '🏄‍♂️', '🏊‍♀️', '🏊‍♂️', '🤽‍♀️', '🤽‍♂️', '🚣‍♀️', '🚣‍♂️', '🧗‍♀️', '🧗‍♂️',
+  '🚵‍♀️', '🚵‍♂️', '🚴‍♀️', '🚴‍♂️', '🏆', '🥇', '🥈', '🥉', '🏅', '🎖️',
+  '🏵️', '🎗️', '🎫', '🎟️', '🎪', '🤹‍♀️', '🤹‍♂️', '🎭', '🎨', '🎬',
+
+  // --- 7. ホビー・カルトカルチャー・楽器 (100) ---
+  '🎤', '🎧', '🎼', '🎹', '🥁', '🪘', '🎷', '🎺', '🎸', '🪕',
+  '🎻', '🪈', '🎬', '🎯', '🎳', '🎮', '🎰', '🎲', '🧩', '🧸',
+  '🪅', '🪆', '🪄', '♟️', '🃏', '🀄', '🎴', '🎭', '🖼️', '🧵',
+  '🪡', '🧶', '🪢', '🚗', '🚘', '🚙', '🚚', '🚛', '🚜', '🏎️',
+  '🚓', '🚑', '🚒', '🚐', '🛻', '🛺', '🚲', '🛴', '🛵', '🏍️',
+  '🦽', '🦼', '🚨', '🚔', '🚍', '🚘', '🛞', '🌁', '🗼', '🗽',
+  '🗿', '⛩️', '🏰', '🏯', '🏟️', '🎡', '🎢', '🎠', '⛲', '⛱️',
+  '🏖️', '🏜️', '🌋', '⛰️', '🏔️', '🗻', '🏕️', '⛺', '🛖', '🏠',
+  '🏡', '🏚️', '🏢', '🏬', '🏣', '🏥', '🏦', '🏨', '🏪', '🏫',
+  '🏩', '💒', '⛪', '🕌', '🕍', '🛕', '🛕', '🕋', '⛩️', '♨️',
+
+  // --- 8. 危険物・事件・オカルト・ツール (100) ---
+  '💈', '🪦', '🪤', '💣', '🧨', '🪓', '🗡️', '⚔️', '🛡️', '🚬',
+  '🪦', '🏺', '🔮', '📿', '🧿', '🪬', '💈', '🧲', '🧪', '🧫',
+  '🧬', '🔬', '🔭', '📡', '💉', '🩸', '💊', '🩹', '🩺', '🚪',
+  '🛗', '🪞', '🪟', '🛋️', '🪑', '🚽', '🪠', '🚿', '🛁', '🪤',
+  '🪒', '🪥', '🧼', '🧻', '🧽', '🧹', '🧺', '🪣', '🔑', '🗝️',
+  '🔏', '🔐', '🔒', '🔓', '🔏', '🔑', '🔨', '🪓', '⛏️', '⚒️',
+  '🛠️', '🗡️', '⚔️', '💣', '🪃', '🏹', '🛡️', '🪚', '🔧', '🪛',
+  '🔩', '⚙️', '🗜️', '⚖️', '🦯', '🔗', '⛓️', '🪝', '🧰', '🧲',
+  '🪜', '🧪', '🧫', '🧬', '🔬', '🔭', '📡', '💉', '🩸', '💊',
+  '🩹', '🩺', '🩻', '🚪', '🛗', '🪞', '🪟', '🛋️', '🪑', '🚽',
+
+  // --- 9. 警告・標識・オカルトシンボル (100) ---
+  '🪠', '⚠️', '🚸', '⛔', '🚫', '🚳', '🚭', '🚯', '🚱', '🚷',
+  '📵', '🔞', '☢️', '☣️', '⬆️', '↗️', '➡️', '↘️', '⬇️', '↙️',
+  '⬅️', '↖️', '↕️', '↔️', '↩️', '↪️', '⤴️', '⤵️', '⚛️', '🕉️',
+  '✡️', '☸️', '☯️', '✝️', '☦️', '☪️', '☮️', '🕎', '🔯', '♈',
+  '♉', '♊', '♋', '♌', '♍', '♎', '♏', '♐', '♑', '♒',
+  '♓', '⛎', '🪯', '🛐', '⛎', '🔯', '🏧', '🚮', '🚰', '♿',
+  '🚹', '🚺', '🚻', '🚼', '🚾', '🛂', '🛃', '🛄', '🛅', '⚠️',
+  '🚸', '⛔', '🚫', '🚳', '🚭', '🚯', '🚱', '🚷', '📵', '🔞',
+  '☢️', '☣️', '⬆️', '↗️', '➡️', '↘️', '⬇️', '↙️', '⬅️', '↖️',
+  '↕️', '↔️', '↩️', '↪️', '⤴️', '⤵️', '🔀', '🔁', '🔂', '🔄',
+
+  // --- 10. シュールな日常品・カオスオブジェクト (100) ---
+  '🎵', '🎶', '➕', '➖', '➗', '✖️', '♾️', '💲', '💱', '™️',
+  '©️', '®️', '👁️‍🗨️', '🎌', '🏁', '🚩', '🏴', '🏳️', '🏳️‍🌈', '🏳️‍⚧️',
+  '🏴‍☠️', '🔔', '🔕', '📣', '📢', '💬', '💭', '🗯️', '♠️', '♣️',
+  '♥️', '♦️', '🃏', '🎴', '🀄', '🕐', '🕑', '🕒', '🕓', '🕔',
+  '🕕', '🕖', '🕗', '🕘', '🕙', '🕚', '🕛', '⏳', '⌛', '⏰',
+  '⌚', '📡', '🔋', '🔌', '💻', '🖥️', '🖨️', '⌨️', '🖱️', '🖲️',
+  '💽', '💾', '💿', '📀', '🧮', '🎥', '🎞️', '📽️', '📺', '📷',
+  '📸', '📹', '📼', '🔍', '🔎', '🕯️', '💡', '🔦', '🏮', '🪔',
+  '📔', '📕', '📖', '📗', '📘', '📙', '📚', '📓', '📒', '📃',
+  '📜', '📄', '📰', '📑', '🔖', '🏷️', '💰', '🪙', '💴', '💵'
+];
+
+    window.onload = function() {
+      document.getElementById('score-date').valueAsDate = new Date();
+      document.getElementById('charge-date').valueAsDate = new Date();
+      fetchData();
+    };
+
+    // メンバー名・備考等をinnerHTMLに埋め込む際の簡易エスケープ
+    function escapeHtml(str) {
+      if (str === null || str === undefined) return '';
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
+
+    function showToast(msg, isAchievement = false) {
+      const container = document.getElementById('toast-container');
+      const toast = document.createElement('div');
+      toast.className = `toast ${isAchievement ? 'toast-achievement' : ''}`;
+      toast.innerText = msg;
+      container.appendChild(toast);
+      setTimeout(() => toast.remove(), 3500);
+    }
+
+    function showEditScoreModal(id, memberId, date, gameCount, g1, g2, g3, g4, g5) {
+      closeModal('modal-history-view');
+      document.getElementById('edit-score-id').value = id;
+
+      const memberSelect = document.getElementById('edit-score-member-id');
+      memberSelect.innerHTML = appData.members.map(m =>
+        `<option value="${m.id}" ${m.id === memberId ? 'selected' : ''}>${escapeHtml(m.name)}</option>`
+      ).join('');
+
+      document.getElementById('edit-score-date').value = date;
+      document.getElementById('edit-score-gc').value = gameCount;
+
+      document.getElementById('edit-score-g1').value = (g1 !== null && g1 !== undefined && !isNaN(g1)) ? g1 : '';
+      document.getElementById('edit-score-g2').value = (g2 !== null && g2 !== undefined && !isNaN(g2)) ? g2 : '';
+      document.getElementById('edit-score-g3').value = (g3 !== null && g3 !== undefined && !isNaN(g3)) ? g3 : '';
+      document.getElementById('edit-score-g4').value = (g4 !== null && g4 !== undefined && !isNaN(g4)) ? g4 : '';
+      document.getElementById('edit-score-g5').value = (g5 !== null && g5 !== undefined && !isNaN(g5)) ? g5 : '';
+
+      updateEditGameSlots();
+      showModal('modal-edit-score');
+    }
+
+    // 編集モーダルの投球G数選択に応じて4G/5G目の入力欄の表示・非表示を切り替える
+    function updateEditGameSlots() {
+      const gc = parseInt(document.getElementById('edit-score-gc').value) || 3;
+      const grid = document.getElementById('edit-score-grid');
+      grid.classList.remove('games-4', 'games-5');
+      if (gc === 4) grid.classList.add('games-4');
+      if (gc === 5) grid.classList.add('games-5');
+
+      document.getElementById('edit-score-g4-wrap').classList.toggle('hidden-slot', gc < 4);
+      document.getElementById('edit-score-g5-wrap').classList.toggle('hidden-slot', gc < 5);
+    }
+
+    function submitUpdateScore() {
+      const g1Val = document.getElementById('edit-score-g1').value;
+      const g2Val = document.getElementById('edit-score-g2').value;
+      const g3Val = document.getElementById('edit-score-g3').value;
+      const g4Val = document.getElementById('edit-score-g4').value;
+      const g5Val = document.getElementById('edit-score-g5').value;
+
+      const g1 = g1Val !== '' ? parseInt(g1Val) : null;
+      const g2 = g2Val !== '' ? parseInt(g2Val) : null;
+      const g3 = g3Val !== '' ? parseInt(g3Val) : null;
+      const g4 = g4Val !== '' ? parseInt(g4Val) : null;
+      const g5 = g5Val !== '' ? parseInt(g5Val) : null;
+
+      const record = {
+        id: document.getElementById('edit-score-id').value,
+        memberId: document.getElementById('edit-score-member-id').value,
+        date: document.getElementById('edit-score-date').value,
+        gameCount: parseInt(document.getElementById('edit-score-gc').value) || 0,
+        g1: g1,
+        g2: g2,
+        g3: g3,
+        g4: g4,
+        g5: g5,
+        totalScore: (g1 || 0) + (g2 || 0) + (g3 || 0) + (g4 || 0) + (g5 || 0)
+      };
+
+      document.getElementById('loading').style.display = 'block';
+      google.script.run.withSuccessHandler(res => {
+        showToast(res.message);
+        closeModal('modal-edit-score');
+        fetchData();
+      }).saveScores([record]);
+    }
+
+    function executeDeleteScore() {
+      const id = document.getElementById('edit-score-id').value;
+      if (!id) return;
+      if (!confirm('この記録を削除します。よろしいですか？（元に戻せません）')) return;
+
+      document.getElementById('loading').style.display = 'block';
+      google.script.run.withSuccessHandler(res => {
+        showToast(res.message);
+        closeModal('modal-edit-score');
+        fetchData();
+      }).deleteScoreRecord(id);
+    }
+
+    function fetchData(onSuccessCallback) {
+      document.getElementById('loading').style.display = 'block';
+      google.script.run.withSuccessHandler(function(res) {
+        if (res.success) {
+          appData = res;
+          document.getElementById('loading').style.display = 'none';
+          document.getElementById('tab-score').style.display = 'block';
+          renderAll();
+          if (onSuccessCallback) onSuccessCallback();
+        }
+      }).getInitialData();
+    }
+
+    function getAchievementIcon(achId) {
+      const ach = ACHIEVEMENTS.find(a => a.id === achId);
+      return ach ? ach.icon : '';
+    }
+
+    function renderAll() {
+      renderScoreInputList();
+      renderVault();
+      renderMembersTab();
+      renderHistory();
+      renderRanking();
+    }
+
+    /* ---------------------------------------------------------
+       ① スコア入力画面
+       --------------------------------------------------------- */
+    // 全メンバーの「参加率」を計算（開催された全日付のうち、そのメンバーが記録を残した日付の割合）
+    function computeAttendanceRates() {
+      const allDates = new Set();
+      appData.attendance.forEach(a => allDates.add(a.date));
+      const totalSessions = allDates.size;
+
+      const attendedByMember = {};
+      appData.attendance.forEach(a => {
+        if (!attendedByMember[a.memberId]) attendedByMember[a.memberId] = new Set();
+        attendedByMember[a.memberId].add(a.date);
+      });
+
+      const rates = {};
+      appData.members.forEach(m => {
+        const attended = attendedByMember[m.id] ? attendedByMember[m.id].size : 0;
+        rates[m.id] = totalSessions > 0 ? attended / totalSessions : 0;
+      });
+      return rates;
+    }
+
+    function renderScoreInputList() {
+      const container = document.getElementById('score-member-list');
+      container.innerHTML = '';
+      let lowBalanceHtml = '';
+
+      const attendanceRates = computeAttendanceRates();
+      const sortedMembers = [...appData.members].sort((a, b) => attendanceRates[b.id] - attendanceRates[a.id]);
+
+      sortedMembers.forEach(member => {
+        const stats = appData.stats[member.id] || { recent15Avg: 0, totalAvg: 0, highScore: 0, totalGameCount: 0, remainingGames: 0 };
+        const badgeClass = stats.remainingGames <= 3 ? 'badge-red' : 'badge-green';
+        const equippedIcon = getAchievementIcon(member.equipped);
+
+        if (stats.remainingGames <= 3) {
+          lowBalanceHtml += `<li>${escapeHtml(member.name)} (残り ${stats.remainingGames} G)</li>`;
+        }
+
+        let arrow = '➔';
+        let arrowColor = '#aaa';
+        if (stats.recent15Avg > stats.totalAvg) {
+          arrow = '⬆'; arrowColor = '#4ade80';
+        } else if (stats.recent15Avg < stats.totalAvg) {
+          arrow = '⬇'; arrowColor = '#f87171';
+        }
+
+        const card = document.createElement('div');
+        card.className = 'score-card member-row';
+        card.setAttribute('data-member-id', member.id);
+
+        card.innerHTML = `
+          <div class="score-card-header">
+            <label class="member-selector">
+              <input type="checkbox" class="attendance-check" value="${member.id}" onchange="toggleInputArea('${member.id}')">
+              <div class="avatar-wrapper score">
+                <span class="score-avatar">${member.avatar || member.name.charAt(0)}</span>
+                ${equippedIcon ? `<span class="equipped-badge" title="装備称号">${equippedIcon}</span>` : ''}
+              </div>
+              <span style="margin-left: 2px;">${escapeHtml(member.name)}</span>
+            </label>
+            <div style="display:flex; align-items:center; gap:6px;">
+              <span class="badge ${badgeClass}">残 ${stats.remainingGames} G</span>
+              <button class="btn btn-secondary btn-sm" onclick="showMyPage('${member.id}')">詳細</button>
+            </div>
+          </div>
+          <div class="score-card-body" id="input-area-${member.id}">
+            <div class="stats-summary">
+              <span>AVE: <strong style="color:#facc15">${stats.recent15Avg.toFixed(1)}</strong> <span style="color:${arrowColor}; font-weight:bold;">${arrow}</span> (${stats.totalAvg.toFixed(1)})</span>
+              <span>最高: <strong>${stats.highScore}</strong></span>
+              <span>総投球: <strong>${stats.totalGameCount}G</strong></span>
+            </div>
+            <div style="display:flex; justify-content:space-between; align-items:center; font-size:12px; margin-bottom:8px;">
+              <span>投球G数: 
+                <select id="gc-${member.id}" onchange="updatePreview('${member.id}'); updateGameSlots('${member.id}')" style="padding:2px 4px;">
+                  <option value="1">1 G</option>
+                  <option value="2">2 G</option>
+                  <option value="3" selected>3 G</option>
+                  <option value="4">4 G</option>
+                  <option value="5">5 G</option>
+                </select>
+              </span>
+              <button class="btn btn-success btn-sm admin-only" onclick="showChargeModal('', '${member.id}', '${member.name}')">🎟️ 回数券追加</button>
+            </div>
+            <div class="input-grid">
+              <div class="input-box-wrap"><label>1G</label><input type="number" id="g1-${member.id}" class="input-box" placeholder="0" oninput="calcTotal('${member.id}')"></div>
+              <div class="input-box-wrap"><label>2G</label><input type="number" id="g2-${member.id}" class="input-box" placeholder="0" oninput="calcTotal('${member.id}')"></div>
+              <div class="input-box-wrap"><label>3G</label><input type="number" id="g3-${member.id}" class="input-box" placeholder="0" oninput="calcTotal('${member.id}')"></div>
+              <div class="input-box-wrap hidden-slot" id="g4-wrap-${member.id}"><label>4G</label><input type="number" id="g4-${member.id}" class="input-box" placeholder="0" oninput="calcTotal('${member.id}')"></div>
+              <div class="input-box-wrap hidden-slot" id="g5-wrap-${member.id}"><label>5G</label><input type="number" id="g5-${member.id}" class="input-box" placeholder="0" oninput="calcTotal('${member.id}')"></div>
+            </div>
+            <div id="calc-result-${member.id}" style="text-align:right; font-size:12px; font-weight:bold; margin-top:6px; color:#38bdf8;"></div>
+          </div>
+        `;
+        container.appendChild(card);
+      });
+
+      const alertArea = document.getElementById('alert-area');
+      if (lowBalanceHtml !== '') {
+        alertArea.innerHTML = `<div class="card" style="border-color:#dc2626;"><b style="font-size:13px; color:#f87171;">⚠️ 回数券残数が少ないメンバー</b><ul style="margin:4px 0; padding-left:20px; font-size:12px; color:#f87171;">${lowBalanceHtml}</ul></div>`;
+      } else {
+        alertArea.innerHTML = '';
+      }
+      applyHideAbsentFilter();
+    }
+
+    function applyHideAbsentFilter() {
+      const hideAbsent = document.getElementById('hide-absent-toggle').checked;
+      document.querySelectorAll('.member-row').forEach(row => {
+        const checkbox = row.querySelector('.attendance-check');
+        row.style.display = (hideAbsent && checkbox && !checkbox.checked) ? 'none' : 'block';
+      });
+    }
+
+    function toggleInputArea(memberId) {
+      const area = document.getElementById(`input-area-${memberId}`);
+      const checkbox = document.querySelector(`.attendance-check[value="${memberId}"]`);
+      if (checkbox && checkbox.checked) {
+        area.classList.add('active');
+        updatePreview(memberId);
+      } else {
+        area.classList.remove('active');
+      }
+      applyHideAbsentFilter();
+    }
+
+    function updatePreview(memberId) {
+      const gc = parseInt(document.getElementById(`gc-${memberId}`).value) || 0;
+      const stats = appData.stats[memberId] || { remainingGames: 0 };
+      const rem = stats.remainingGames - gc;
+      document.getElementById(`calc-result-${memberId}`).innerText = `消化後残数: ${rem} G`;
+    }
+
+    // 投球G数の選択に応じて4G/5G目の入力欄の表示・非表示を切り替える
+    function updateGameSlots(memberId) {
+      const gc = parseInt(document.getElementById(`gc-${memberId}`).value) || 3;
+      const grid = document.getElementById(`gc-${memberId}`).closest('.score-card-body').querySelector('.input-grid');
+      grid.classList.remove('games-4', 'games-5');
+      if (gc === 4) grid.classList.add('games-4');
+      if (gc === 5) grid.classList.add('games-5');
+
+      const g4Wrap = document.getElementById(`g4-wrap-${memberId}`);
+      const g5Wrap = document.getElementById(`g5-wrap-${memberId}`);
+      g4Wrap.classList.toggle('hidden-slot', gc < 4);
+      g5Wrap.classList.toggle('hidden-slot', gc < 5);
+      if (gc < 4) document.getElementById(`g4-${memberId}`).value = '';
+      if (gc < 5) document.getElementById(`g5-${memberId}`).value = '';
+      calcTotal(memberId);
+    }
+
+    function calcTotal(memberId) {
+      const g1 = parseInt(document.getElementById(`g1-${memberId}`).value) || 0;
+      const g2 = parseInt(document.getElementById(`g2-${memberId}`).value) || 0;
+      const g3 = parseInt(document.getElementById(`g3-${memberId}`).value) || 0;
+      const g4 = parseInt(document.getElementById(`g4-${memberId}`).value) || 0;
+      const g5 = parseInt(document.getElementById(`g5-${memberId}`).value) || 0;
+      const sum = g1 + g2 + g3 + g4 + g5;
+      document.getElementById(`calc-result-${memberId}`).innerText = `合計: ${sum} 点`;
+    }
+
+    function submitScores() {
+      const date = document.getElementById('score-date').value;
+      const checkboxes = document.querySelectorAll('.attendance-check:checked');
+      if (checkboxes.length === 0) return showToast('参加メンバーが選択されていません');
+
+      const beforeUnlocked = {};
+      appData.members.forEach(m => {
+        beforeUnlocked[m.id] = checkAchievements(appData.stats[m.id]);
+      });
+
+      const records = [];
+      checkboxes.forEach(cb => {
+        const mId = cb.value;
+        const g1 = parseInt(document.getElementById(`g1-${mId}`).value) || null;
+        const g2 = parseInt(document.getElementById(`g2-${mId}`).value) || null;
+        const g3 = parseInt(document.getElementById(`g3-${mId}`).value) || null;
+        const g4 = parseInt(document.getElementById(`g4-${mId}`).value) || null;
+        const g5 = parseInt(document.getElementById(`g5-${mId}`).value) || null;
+        records.push({
+          date: date,
+          memberId: mId,
+          gameCount: parseInt(document.getElementById(`gc-${mId}`).value) || 0,
+          g1: g1, g2: g2, g3: g3, g4: g4, g5: g5,
+          totalScore: (g1||0) + (g2||0) + (g3||0) + (g4||0) + (g5||0)
+        });
+      });
+
+      const totalGamesToday = records.reduce((sum, r) => sum + (r.gameCount || 0), 0);
+      const poolBefore = appData.vault.totalPoolGames;
+
+      document.getElementById('loading').style.display = 'block';
+      google.script.run.withSuccessHandler(res => {
+        showToast(res.message);
+        
+        fetchData(() => {
+          showSaveSummary(totalGamesToday, poolBefore, appData.vault.totalPoolGames);
+
+          checkboxes.forEach(cb => {
+            const mId = cb.value;
+            const member = appData.members.find(m => m.id === mId);
+            const afterList = checkAchievements(appData.stats[mId]);
+            const beforeList = beforeUnlocked[mId] || [];
+
+            const newlyUnlocked = afterList.filter(id => !beforeList.includes(id));
+            newlyUnlocked.forEach(achId => {
+              const ach = ACHIEVEMENTS.find(a => a.id === achId);
+              if (ach && member) {
+                showToast(`🎉 【${member.name}】がアチーブメント『${ach.icon} ${ach.name}』を獲得！`, true);
+              }
+            });
+          });
+        });
+      }).saveScores(records);
+    }
+
+    function showSaveSummary(totalGamesToday, poolBefore, poolAfter) {
+      document.getElementById('summary-total-games').innerText = `${totalGamesToday} G`;
+      document.getElementById('summary-pool-before').innerText = `${poolBefore} G`;
+      document.getElementById('summary-pool-after').innerText = `${poolAfter} G`;
+      showModal('modal-save-summary');
+    }
+
+    /* ---------------------------------------------------------
+       ② 回数券残量画面
+       --------------------------------------------------------- */
+    function renderVault() {
+      document.getElementById('vault-in').innerText = `${appData.vault.totalInGames} G`;
+      document.getElementById('vault-out').innerText = `${appData.vault.totalOutGames} G`;
+      document.getElementById('vault-games').innerText = `${appData.vault.totalPoolGames} G`;
+      document.getElementById('vault-members').innerText = appData.vault.activeMembersCount;
+
+      const lowContainer = document.getElementById('low-balance-container');
+      lowContainer.innerHTML = '';
+      let hasLow = false;
+      appData.members.forEach(m => {
+        const stats = appData.stats[m.id];
+        if (stats.remainingGames <= 3) {
+          hasLow = true;
+          lowContainer.innerHTML += `
+            <div style="display:flex; justify-content:space-between; align-items:center; padding:6px 0; border-bottom:1px solid #2d2d2d;">
+              <span>${escapeHtml(m.name)} (残り ${stats.remainingGames} G)</span>
+              <button class="btn btn-success btn-sm admin-only" onclick="showChargeModal('', '${m.id}', '${m.name}')">追加</button>
+            </div>
+          `;
+        }
+      });
+      if (!hasLow) lowContainer.innerHTML = '<span style="color:#888;">該当者はいません</span>';
+
+      renderVaultLedger();
+    }
+
+    let vaultChartInstance = null;
+
+    function buildVaultLedgerEvents() {
+      const events = [];
+      const gamesPerPack = (appData.settings && appData.settings.gamesPerPack) || 11;
+
+      appData.deposits.forEach(d => {
+        events.push({
+          date: d.date,
+          type: 'in',
+          amount: d.packs * gamesPerPack,
+          label: `${escapeHtml(d.memberName)} さんが回数券 ${d.packs}冊 購入`,
+          note: d.note,
+          sortKey: 0,
+          depositId: d.id,
+          memberId: d.memberId,
+          memberName: d.memberName,
+          packs: d.packs
+        });
+      });
+
+      const outByDate = {};
+      appData.attendance.forEach(a => {
+        if (!outByDate[a.date]) outByDate[a.date] = { total: 0, members: {} };
+        outByDate[a.date].total += (a.gameCount || 0);
+        outByDate[a.date].members[a.memberName] = (outByDate[a.date].members[a.memberName] || 0) + (a.gameCount || 0);
+      });
+      Object.keys(outByDate).forEach(date => {
+        const info = outByDate[date];
+        const detail = Object.keys(info.members).map(name => `${name}(${info.members[name]}G)`).join(', ');
+        events.push({
+          date: date,
+          type: 'out',
+          amount: info.total,
+          label: `本日の消化: ${detail}`,
+          sortKey: 1
+        });
+      });
+
+      events.sort((a, b) => (new Date(a.date) - new Date(b.date)) || (a.sortKey - b.sortKey));
+      let running = 0;
+      events.forEach(ev => {
+        running += (ev.type === 'in' ? ev.amount : -ev.amount);
+        ev.balanceAfter = running;
+      });
+
+      return events;
+    }
+
+    function renderVaultChart() {
+      const filter = document.getElementById('vault-chart-filter').value;
+      const now = new Date();
+      const currentYear = `${now.getFullYear()}`;
+      const currentMonth = `${now.getFullYear()}-${('0' + (now.getMonth() + 1)).slice(-2)}`;
+      const currentQuarter = `Q${Math.ceil((now.getMonth() + 1) / 3)}`;
+
+      function isInPeriod(dateStr) {
+        if (filter === 'all') return true;
+        if (filter === 'year') return dateStr.startsWith(currentYear);
+        if (filter === 'month') return dateStr.startsWith(currentMonth);
+        if (filter === 'quarter') {
+          if (!dateStr.startsWith(currentYear)) return false;
+          const m = parseInt(dateStr.substring(5, 7));
+          return `Q${Math.ceil(m / 3)}` === currentQuarter;
+        }
+        return false;
+      }
+
+      // 残高（balanceAfter）は常に通算の累積値を使い、表示範囲だけを期間で絞り込む
+      const allEvents = buildVaultLedgerEvents();
+      const events = allEvents.filter(e => isInPeriod(e.date));
+
+      const ctx = document.getElementById('vaultBalanceChart').getContext('2d');
+      if (vaultChartInstance) vaultChartInstance.destroy();
+
+      if (events.length === 0) {
+        vaultChartInstance = null;
+        ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+        return;
+      }
+
+      vaultChartInstance = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: events.map(e => e.date),
+          datasets: [{
+            label: '在庫残高',
+            data: events.map(e => e.balanceAfter),
+            borderColor: '#38bdf8',
+            backgroundColor: 'rgba(56, 189, 248, 0.12)',
+            fill: true,
+            stepped: true,
+            pointRadius: 0,
+            tension: 0
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          scales: { y: { grid: { color: '#333' }, beginAtZero: true }, x: { grid: { color: '#333' }, ticks: { maxTicksLimit: 6 } } },
+          plugins: { legend: { display: false } }
+        }
+      });
+    }
+
+    function renderVaultLedger() {
+      const events = buildVaultLedgerEvents();
+
+      renderVaultChart();
+
+      const monthlyGroups = {};
+      events.forEach(ev => {
+        const month = ev.date.substring(0, 7);
+        if (!monthlyGroups[month]) monthlyGroups[month] = { in: 0, out: 0, items: [] };
+        if (ev.type === 'in') monthlyGroups[month].in += ev.amount;
+        else monthlyGroups[month].out += ev.amount;
+        monthlyGroups[month].items.push(ev);
+      });
+
+      const accordionContainer = document.getElementById('vault-accordion-container');
+      accordionContainer.innerHTML = '';
+
+      Object.keys(monthlyGroups).sort().reverse().forEach(month => {
+        const group = monthlyGroups[month];
+        const itemsDesc = [...group.items].reverse();
+
+        const monthHtml = `
+          <div class="accordion-header" onclick="toggleAccordion('${month}')">
+            <span>📅 ${month}</span>
+            <span class="ledger-month-summary">
+              <span class="ledger-in-tag">＋${group.in}G</span>
+              <span class="ledger-out-tag">－${group.out}G</span>
+              <span>▼</span>
+            </span>
+          </div>
+          <div id="accordion-${month}" style="display:none; padding: 4px 0;">
+            ${itemsDesc.map(ev => `
+              <div class="ledger-event">
+                <div style="display:flex; align-items:center; min-width:0;">
+                  <span class="ledger-type-badge ${ev.type}">${ev.type === 'in' ? '＋' : '－'}</span>
+                  <div style="min-width:0;">
+                    <div style="color:#e0e0e0;">${ev.date} - ${ev.label}</div>
+                    <div class="ledger-balance">保有残数: ${ev.balanceAfter} G</div>
+                  </div>
+                </div>
+                <div style="display:flex; align-items:center; gap:6px; flex-shrink:0; margin-left:8px;">
+                  <div class="ledger-amount ${ev.type}">${ev.type === 'in' ? '+' : '-'}${ev.amount}G</div>
+                  ${ev.type === 'in' ? `<button class="btn btn-secondary btn-sm admin-only" onclick="showChargeModal('${ev.depositId}', '${ev.memberId}', '${ev.memberName}', '${ev.date}', ${ev.packs}, '${(ev.note || '').replace(/'/g, "\\'")}')">編集</button>` : ''}
+                </div>
+              </div>
+            `).join('')}
+          </div>
+        `;
+        accordionContainer.innerHTML += monthHtml;
+      });
+    }
+
+    function toggleAccordion(month) {
+      const el = document.getElementById(`accordion-${month}`);
+      el.style.display = el.style.display === 'none' ? 'block' : 'none';
+    }
+
+    function showChargeModal(id, memberId, name, date, packs, note) {
+      document.getElementById('charge-id').value = id || '';
+      document.getElementById('charge-member-id').value = memberId;
+      document.getElementById('charge-target-name').innerText = `対象: ${name} さん`;
+      document.getElementById('charge-date').value = date || new Date().toISOString().split('T')[0];
+      document.getElementById('charge-note').value = note || '';
+      
+      currentPacksCount = packs || 1;
+      updateChargeDisplay();
+      showModal('modal-charge');
+    }
+
+    function incrementChargePack() {
+      currentPacksCount++;
+      updateChargeDisplay();
+    }
+
+    function decrementChargePack() {
+      currentPacksCount--;
+      updateChargeDisplay();
+    }
+
+    function resetChargePack() {
+      currentPacksCount = 1;
+      updateChargeDisplay();
+    }
+
+    function updateChargeDisplay() {
+      const price = (appData.settings && appData.settings.pricePerPack) || 3000;
+      const games = (appData.settings && appData.settings.gamesPerPack) || 11;
+      document.getElementById('charge-packs-display').innerText = currentPacksCount;
+      document.getElementById('charge-games-display').innerText = currentPacksCount * games;
+      document.getElementById('charge-total-price').innerText = (currentPacksCount * price).toLocaleString();
+    }
+
+    function submitCharge() {
+      if (currentPacksCount === 0) return showToast('冊数が0です。増減させてから保存してください。');
+      const targetMemberId = document.getElementById('charge-member-id').value;
+      const beforeUnlocked = checkAchievements(appData.stats[targetMemberId]);
+
+      const data = {
+        id: document.getElementById('charge-id').value,
+        memberId: targetMemberId,
+        date: document.getElementById('charge-date').value,
+        packs: currentPacksCount,
+        note: document.getElementById('charge-note').value
+      };
+
+      google.script.run.withSuccessHandler(res => {
+        showToast(res.message);
+        closeModal('modal-charge');
+        fetchData(() => {
+          const member = appData.members.find(m => m.id === targetMemberId);
+          const afterList = checkAchievements(appData.stats[targetMemberId]);
+          const newlyUnlocked = afterList.filter(id => !beforeUnlocked.includes(id));
+          
+          newlyUnlocked.forEach(achId => {
+            const ach = ACHIEVEMENTS.find(a => a.id === achId);
+            if (ach && member) {
+              showToast(`🎉 【${member.name}】がアチーブメント『${ach.icon} ${ach.name}』を獲得！`, true);
+            }
+          });
+        });
+      }).saveDeposit(data);
+    }
+
+    /* ---------------------------------------------------------
+       ③ マイページ・グラフ描画
+       --------------------------------------------------------- */
+    function showMyPage(memberId) {
+      currentMyPageMemberId = memberId;
+      clearGraphDateFilter();
+
+      // ランキング／過去のスコア履歴／称号・実績は開くたびに必ず閉じた状態にする
+      document.getElementById('mypage-ranking-full').style.display = 'none';
+      document.getElementById('toggle-ranking-btn').innerText = '詳細を見る ▼';
+      document.getElementById('mypage-ranking-filter').value = 'month';
+
+      document.getElementById('mypage-history-full').style.display = 'none';
+      document.getElementById('toggle-history-btn').innerText = '表示する ▼';
+
+      document.getElementById('mypage-ach-full').style.display = 'none';
+      document.getElementById('toggle-ach-btn').innerText = '一覧を見る ▼';
+
+      showModal('modal-mypage');
+      // スクロールされた状態から開かれても必ず一番上から表示する
+      const content = document.getElementById('modal-mypage').querySelector('.modal-content');
+      if (content) content.scrollTop = 0;
+    }
+
+    function clearGraphDateFilter() {
+      document.getElementById('mypage-filter-start').value = '';
+      document.getElementById('mypage-filter-end').value = '';
+      renderMyPageData();
+    }
+
+    function toggleMyPageHistory() {
+      const el = document.getElementById('mypage-history-full');
+      const btn = document.getElementById('toggle-history-btn');
+      if (el.style.display === 'none') {
+        el.style.display = 'block';
+        btn.innerText = '閉じる ▲';
+      } else {
+        el.style.display = 'none';
+        btn.innerText = '表示する ▼';
+      }
+    }
+
+    const RANKING_CATEGORY_LABELS = {
+      avg: 'アベレージ',
+      g3: '3G合計スコア',
+      high: 'ハイスコア(1G)',
+      games: '投球ゲーム数',
+      gapMax: '最多ギャップ',
+      gapMin: '最小ギャップ',
+      mip: '急成長(MIP)',
+      giant: 'ジャイアントキリング'
+    };
+
+    // 今月時点でのメダル獲得数（見出し用・コンパクト表示）
+    function renderMyPageRankingSummary() {
+      if (!currentMyPageMemberId) return;
+      const r = computeRankings('month');
+      const counts = { 1: 0, 2: 0, 3: 0 };
+      Object.keys(RANKING_CATEGORY_LABELS).forEach(key => {
+        const idx = (r[key] || []).findIndex(x => x.id === currentMyPageMemberId);
+        if (idx >= 0 && idx < 3) counts[idx + 1]++;
+      });
+      const el = document.getElementById('mypage-ranking-summary');
+      const total = counts[1] + counts[2] + counts[3];
+      if (total === 0) {
+        el.innerText = '(今月のメダルなし)';
+      } else {
+        const parts = [];
+        if (counts[1]) parts.push(`🥇×${counts[1]}`);
+        if (counts[2]) parts.push(`🥈×${counts[2]}`);
+        if (counts[3]) parts.push(`🥉×${counts[3]}`);
+        el.innerText = `今月: ${parts.join(' ')}`;
+      }
+    }
+
+    function toggleMyPageRanking() {
+      const el = document.getElementById('mypage-ranking-full');
+      const btn = document.getElementById('toggle-ranking-btn');
+      if (el.style.display === 'none') {
+        el.style.display = 'block';
+        btn.innerText = '閉じる ▲';
+        renderMyPageRankingDetail();
+      } else {
+        el.style.display = 'none';
+        btn.innerText = '詳細を見る ▼';
+      }
+    }
+
+    function renderMyPageRankingDetail() {
+      if (!currentMyPageMemberId) return;
+      const filter = document.getElementById('mypage-ranking-filter').value;
+      const r = computeRankings(filter);
+      const container = document.getElementById('mypage-ranking-list');
+      const medals = ['🥇', '🥈', '🥉'];
+
+      const rows = [];
+      Object.keys(RANKING_CATEGORY_LABELS).forEach(key => {
+        const arr = r[key] || [];
+        const idx = arr.findIndex(x => x.id === currentMyPageMemberId);
+        if (idx === -1) return; // ランク外（対象データなし）は表示しない
+        const rank = idx + 1;
+        const badge = rank <= 3 ? medals[rank - 1] : `${rank}位`;
+        rows.push(`
+          <div style="display:flex; justify-content:space-between; align-items:center; padding: 5px 0; border-bottom: 1px solid #333;">
+            <span>${RANKING_CATEGORY_LABELS[key]}</span>
+            <span style="color:#facc15; font-weight:bold;">${badge}</span>
+          </div>
+        `);
+      });
+
+      container.innerHTML = rows.length > 0
+        ? rows.join('')
+        : '<div style="color:#888; text-align:center; padding:8px;">この期間はランクインしている項目がありません</div>';
+    }
+
+    function renderMyPageData() {
+      if (!currentMyPageMemberId) return;
+      const member = appData.members.find(m => m.id === currentMyPageMemberId);
+      const stats = appData.stats[currentMyPageMemberId];
+
+      const startDate = document.getElementById('mypage-filter-start').value;
+      const endDate = document.getElementById('mypage-filter-end').value;
+
+      let filteredAtt = appData.attendance.filter(a => a.memberId === currentMyPageMemberId);
+      if (startDate) filteredAtt = filteredAtt.filter(a => a.date >= startDate);
+      if (endDate) filteredAtt = filteredAtt.filter(a => a.date <= endDate);
+
+      document.getElementById('mypage-name').innerText = `${member.name} さんの個人成績`;
+      document.getElementById('mypage-avatar-btn').innerText = member.avatar || member.name.charAt(0);
+      
+      const equippedBadgeEl = document.getElementById('mypage-equipped-badge');
+      const equippedIcon = getAchievementIcon(member.equipped);
+      if (equippedIcon) {
+        equippedBadgeEl.innerText = equippedIcon;
+        equippedBadgeEl.style.display = 'flex';
+      } else {
+        equippedBadgeEl.style.display = 'none';
+      }
+
+      document.getElementById('mypage-avg-total').innerText = stats.totalAvg.toFixed(1);
+      document.getElementById('mypage-avg-recent').innerText = stats.recent15Avg.toFixed(1);
+      document.getElementById('mypage-high').innerText = `${stats.highScore} 点`;
+
+      renderMyPageRankingSummary();
+
+      const historyListContainer = document.getElementById('mypage-history-list');
+      document.getElementById('mypage-history-count').innerText = `(${filteredAtt.length}件)`;
+      
+      if (filteredAtt.length === 0) {
+        const avgEl = document.getElementById('mypage-history-avg');
+        if (avgEl) avgEl.innerText = '-';
+        historyListContainer.innerHTML = '<div style="color:#888; font-size:12px; text-align:center; padding:8px;">該当するスコア記録がありません</div>';
+      } else {
+        const totalScoreSum = filteredAtt.reduce((sum, att) => sum + Number(att.totalScore || 0), 0);
+        const totalGameSum = filteredAtt.reduce((sum, att) => sum + Number(att.gameCount || 0), 0);
+        const periodAvg = totalGameSum > 0 ? (totalScoreSum / totalGameSum).toFixed(1) : '-';
+        
+        const avgEl = document.getElementById('mypage-history-avg');
+        if (avgEl) avgEl.innerText = `${periodAvg}点`;
+
+        const historySorted = [...filteredAtt].sort((a, b) => new Date(b.date) - new Date(a.date));
+        historyListContainer.innerHTML = historySorted.map(att => {
+          const scores = [att.g1, att.g2, att.g3, att.g4, att.g5]
+            .filter(g => g !== null && g !== undefined && !isNaN(g))
+            .join(', ');
+
+          const dayAvg = (att.gameCount > 0 && att.totalScore > 0) 
+            ? (att.totalScore / att.gameCount).toFixed(1) 
+            : '-';
+
+          return `
+            <div style="border-bottom: 1px solid #333; padding: 6px 0; font-size: 12px; display: flex; justify-content: space-between; align-items: center;">
+              <div>
+                <span style="color: #38bdf8; font-weight: bold;">${att.date}</span>
+                <span style="color: #aaa; margin-left: 6px;">[${scores || '記録なし'}]</span>
+              </div>
+              <div style="text-align: right;">
+                <strong style="color: #facc15;">${att.totalScore}点</strong>
+                <span style="color: #888; font-size: 11px;">(${att.gameCount}G)</span>
+                <span style="color: #38bdf8; font-size: 11px; margin-left: 4px;">Avg: ${dayAvg}</span>
+              </div>
+            </div>
+          `;
+        }).join('');
+      }
+
+      const unlockedList = checkAchievements(stats);
+      document.getElementById('mypage-ach-count').innerText = `(${unlockedList.length} / ${ACHIEVEMENTS.length})`;
+      document.getElementById('mypage-ach-summary').innerText = `獲得済み: ${unlockedList.map(id => getAchievementIcon(id)).join(' ')}`;
+
+      const badgesContainer = document.getElementById('mypage-badges');
+      badgesContainer.innerHTML = '';
+      ACHIEVEMENTS.forEach(ach => {
+        const isUnlocked = unlockedList.includes(ach.id);
+        const isEquipped = member.equipped === ach.id;
+        badgesContainer.innerHTML += `
+          <div class="achievement-item ${isUnlocked ? '' : 'locked'} ${isEquipped ? 'equipped' : ''}" onclick="showAchievementDetail('${ach.id}', ${isUnlocked}, ${isEquipped})">
+            <span class="achievement-icon">${ach.icon}</span>
+            <span class="achievement-name">${ach.name}</span>
+          </div>
+        `;
+      });
+
+      const unit = document.getElementById('chart-unit-select').value || 'day';
+      const groupedData = {};
+
+      const sortedAtt = [...filteredAtt].sort((a, b) => new Date(a.date) - new Date(b.date));
+
+      sortedAtt.forEach(a => {
+        let key = a.date.substring(0, 7);
+        if (unit === 'day') {
+          key = a.date;
+        } else if (unit === 'year') {
+          key = a.date.substring(0, 4);
+        } else if (unit === 'quarter') {
+          const m = parseInt(a.date.substring(5, 7));
+          const q = Math.ceil(m / 3);
+          key = `${a.date.substring(0, 4)}-Q${q}`;
+        }
+
+        if (!groupedData[key]) groupedData[key] = { totalScore: 0, games: 0 };
+        groupedData[key].totalScore += a.totalScore;
+        groupedData[key].games += a.gameCount;
+      });
+
+      const labels = Object.keys(groupedData).sort();
+      const dataPoints = labels.map(k => (groupedData[k].totalScore / groupedData[k].games).toFixed(1));
+
+      const ctx = document.getElementById('scoreChart').getContext('2d');
+      if (scoreChartInstance) scoreChartInstance.destroy();
+      
+      scoreChartInstance = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: labels,
+          datasets: [{
+            label: 'アベレージ',
+            data: dataPoints,
+            borderColor: '#38bdf8',
+            backgroundColor: 'rgba(56, 189, 248, 0.1)',
+            fill: true,
+            tension: 0.2
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          scales: { y: { grid: { color: '#333' } }, x: { grid: { color: '#333' } } },
+          plugins: { legend: { display: false } }
+        }
+      });
+    }
+
+    /* ---------------------------------------------------------
+       ④ ランキングタブ
+       --------------------------------------------------------- */
+    const RANKING_INFO = {
+      avg: 'アベレージランキング\n\n選択した期間内に投球したスコアの平均点が高い順のランキングです。目安として月あたり6G以上の投球実績がないと対象になりません（今四半期は18G以上、今年は72G以上が目安）。',
+      g3: '3G合計スコアランキング\n\n1回の参加が3ゲームだった日の合計スコアが最も高かった記録のランキングです（4G・5Gで参加した日は対象外）。',
+      high: 'ハイスコア(1G)ランキング\n\n1ゲームで記録した最高スコアのランキングです。',
+      games: '投球ゲーム数ランキング\n\n選択した期間内に投球した総ゲーム数のランキングです。',
+      gapMax: '最多ギャップランキング\n\n1日(最大5G)の中での「最高スコア」と「最低スコア」の差が最も大きかった日の記録のランキングです。波の大きさを競います。（2ゲームのみの日は対象外）',
+      gapMin: '最小ギャップランキング\n\n1日(最大5G)の中での「最高スコア」と「最低スコア」の差が最も小さかった日の記録のランキングです（例: 150, 152, 151点など）。安定感を競います。（2ゲームのみの日は対象外）',
+      mip: '急成長(MIP)ランキング\n\n通算アベレージと比較して、選択した期間のアベレージがどれだけ伸びたかのランキングです。通算(歴代)フィルタでは算出できないため表示されません。',
+      giant: 'ジャイアントキリングランキング\n\n自分の通算アベレージより+30点以上高いスコアを出した回数のランキングです。'
+    };
+
+    function showRankingInfo(key) {
+      const info = RANKING_INFO[key] || '';
+      const [title, ...rest] = info.split('\n\n');
+      document.getElementById('ranking-info-title').innerText = title;
+      document.getElementById('ranking-info-desc').innerText = rest.join('\n\n');
+      showModal('modal-ranking-info');
+    }
+
+    function formatShortDate(dateStr) {
+      if (!dateStr) return '';
+      const parts = dateStr.split('-');
+      if (parts.length < 3) return dateStr;
+      return `${parts[0]}/${parseInt(parts[1])}/${parseInt(parts[2])}`;
+    }
+
+    // アベレージランキングの最低投球数（月あたり6G以上を基準に期間へ按分）
+    function getMinGamesForAvgRanking(filter) {
+      const MONTHLY_MIN = 6;
+      if (filter === 'month') return MONTHLY_MIN;
+      if (filter === 'quarter') return MONTHLY_MIN * 3;
+      if (filter === 'year') return MONTHLY_MIN * 12;
+
+      // 通算(all): 初回記録から現在までの月数で按分
+      if (!appData.attendance || appData.attendance.length === 0) return MONTHLY_MIN;
+      const dates = appData.attendance.map(a => new Date(a.date)).filter(d => !isNaN(d));
+      if (dates.length === 0) return MONTHLY_MIN;
+      const earliest = new Date(Math.min(...dates));
+      const now = new Date();
+      const months = Math.max(1, (now.getFullYear() - earliest.getFullYear()) * 12 + (now.getMonth() - earliest.getMonth()) + 1);
+      return MONTHLY_MIN * months;
+    }
+
+    function computeRankings(filter) {
+      const now = new Date();
+      const currentYear = `${now.getFullYear()}`;
+      const currentMonth = `${now.getFullYear()}-${('0' + (now.getMonth() + 1)).slice(-2)}`;
+      const currentQuarter = `Q${Math.ceil((now.getMonth() + 1) / 3)}`;
+
+      function isInPeriod(dateStr) {
+        if (filter === 'all') return true;
+        if (filter === 'year') return dateStr.startsWith(currentYear);
+        if (filter === 'month') return dateStr.startsWith(currentMonth);
+        if (filter === 'quarter') {
+          if (!dateStr.startsWith(currentYear)) return false;
+          const m = parseInt(dateStr.substring(5, 7));
+          return `Q${Math.ceil(m / 3)}` === currentQuarter;
+        }
+        return false;
+      }
+
+      const statsMap = {};
+      appData.members.forEach(m => {
+        statsMap[m.id] = {
+          id: m.id, name: m.name, totalScore: 0, games: 0,
+          highScore: 0, highScoreDate: '',
+          max3GScore: 0, max3GDate: '', max3GBreakdown: '',
+          bestGap: null, bestGapDate: '', bestGapBreakdown: '',
+          worstGap: null, worstGapDate: '', worstGapBreakdown: '',
+          giantCount: 0
+        };
+      });
+
+      appData.attendance.forEach(att => {
+        if (!isInPeriod(att.date) || !statsMap[att.memberId]) return;
+        const s = statsMap[att.memberId];
+        s.totalScore += att.totalScore;
+        s.games += att.gameCount;
+        const maxInAtt = Math.max(att.g1 || 0, att.g2 || 0, att.g3 || 0, att.g4 || 0, att.g5 || 0);
+        if (maxInAtt > s.highScore) {
+          s.highScore = maxInAtt;
+          s.highScoreDate = att.date;
+        }
+
+        // 3G合計スコアランキング：仕様上、3ゲーム開催の記録のみを対象とする（4G/5Gの日は対象外）
+        if (att.gameCount === 3 && att.totalScore > s.max3GScore) {
+          s.max3GScore = att.totalScore;
+          s.max3GDate = att.date;
+          s.max3GBreakdown = `${att.g1} / ${att.g2} / ${att.g3}`;
+        }
+
+        // 最多/最小ギャップ（その日に記録されたゲーム(最大5G)の中での最高・最低差。2Gのみの日は対象外）
+        const dayVals = [att.g1, att.g2, att.g3, att.g4, att.g5].filter(v => v != null);
+        if (dayVals.length >= 3) {
+          const gap = Math.max(...dayVals) - Math.min(...dayVals);
+          const breakdown = dayVals.join(' / ');
+          if (s.bestGap === null || gap > s.bestGap) {
+            s.bestGap = gap; s.bestGapDate = att.date; s.bestGapBreakdown = breakdown;
+          }
+          if (s.worstGap === null || gap < s.worstGap) {
+            s.worstGap = gap; s.worstGapDate = att.date; s.worstGapBreakdown = breakdown;
+          }
+        }
+
+        // ジャイアントキリング（個人の通算アベレージ+30点以上）
+        const personalAvg = (appData.stats[att.memberId] && appData.stats[att.memberId].totalAvg) || 0;
+        if (personalAvg > 0) {
+          [att.g1, att.g2, att.g3, att.g4, att.g5].forEach(g => {
+            if (g != null && g >= personalAvg + 30) s.giantCount++;
+          });
+        }
+      });
+
+      const list = Object.values(statsMap);
+
+      // アベレージランキングは最低でも「月あたり6G以上」の投球数を要求する（期間に応じて按分）
+      const minGamesForAvg = getMinGamesForAvgRanking(filter);
+
+      const result = {};
+      result.avg = [...list].filter(x => x.games >= minGamesForAvg).sort((a,b) => (b.totalScore/b.games) - (a.totalScore/a.games));
+      result.g3 = [...list].filter(x => x.max3GScore > 0).sort((a,b) => b.max3GScore - a.max3GScore);
+      result.high = [...list].filter(x => x.highScore > 0).sort((a,b) => b.highScore - a.highScore);
+      result.games = [...list].filter(x => x.games > 0).sort((a,b) => b.games - a.games);
+      result.gapMax = [...list].filter(x => x.bestGap !== null).sort((a,b) => b.bestGap - a.bestGap);
+      result.gapMin = [...list].filter(x => x.worstGap !== null).sort((a,b) => a.worstGap - b.worstGap);
+      result.giant = [...list].filter(x => x.giantCount > 0).sort((a,b) => b.giantCount - a.giantCount);
+
+      if (filter === 'all') {
+        result.mip = [];
+      } else {
+        result.mip = list
+          .filter(x => x.games > 0 && appData.stats[x.id] && appData.stats[x.id].totalAvg > 0)
+          .map(x => {
+            const periodAvg = x.totalScore / x.games;
+            const beforeAvg = appData.stats[x.id].totalAvg;
+            const growth = periodAvg - beforeAvg;
+            return Object.assign({}, x, { growth: growth, periodAvg: periodAvg, beforeAvg: beforeAvg });
+          })
+          .filter(x => x.growth > 0)
+          .sort((a, b) => b.growth - a.growth);
+      }
+
+      return result;
+    }
+
+    function renderRanking() {
+      const filter = document.getElementById('ranking-filter').value;
+      const r = computeRankings(filter);
+
+      renderRankingList('ranking-avg', r.avg.slice(0, 5), x => `${(x.totalScore / x.games).toFixed(1)}`, x => `${x.games}G参加`);
+      renderRankingList('ranking-3g', r.g3.slice(0, 5),
+        x => `${x.max3GScore}点`,
+        x => `${formatShortDate(x.max3GDate)} (${x.max3GBreakdown})`);
+      renderRankingList('ranking-high', r.high.slice(0, 5),
+        x => `${x.highScore}点`,
+        x => `${formatShortDate(x.highScoreDate)} 達成`);
+      renderRankingList('ranking-games', r.games.slice(0, 5), x => `${x.games}G`, x => `投球数`);
+      renderRankingList('ranking-gap-max', r.gapMax.slice(0, 5),
+        x => `${x.bestGap}点差`,
+        x => `${formatShortDate(x.bestGapDate)} (${x.bestGapBreakdown})`);
+      renderRankingList('ranking-gap-min', r.gapMin.slice(0, 5),
+        x => `${x.worstGap}点差`,
+        x => `${formatShortDate(x.worstGapDate)} (${x.worstGapBreakdown})`);
+      renderRankingList('ranking-giant', r.giant.slice(0, 5),
+        x => `${x.giantCount}回`,
+        x => `アベレージ ${((appData.stats[x.id] && appData.stats[x.id].totalAvg) || 0).toFixed(1)}`);
+
+      // MIPランキング（通算フィルタでは非表示）
+      const mipSection = document.getElementById('ranking-section-mip');
+      if (filter === 'all') {
+        mipSection.style.display = 'none';
+      } else {
+        mipSection.style.display = 'block';
+        renderRankingList('ranking-mip', r.mip.slice(0, 5),
+          x => `+${x.growth.toFixed(1)}`,
+          x => `${x.beforeAvg.toFixed(1)} → ${x.periodAvg.toFixed(1)}`);
+      }
+    }
+
+    function renderRankingList(containerId, sortedList, mainScoreFn, subScoreFn) {
+      const container = document.getElementById(containerId);
+      if (!sortedList || sortedList.length === 0) {
+        container.innerHTML = '<div class="ranking-empty">この期間の記録がまだありません</div>';
+        return;
+      }
+
+      const medals = ['🥇', '🥈', '🥉'];
+      container.innerHTML = sortedList.map((item, idx) => {
+        const rank = idx + 1;
+        const rankClass = rank <= 3 ? `rank-${rank}` : '';
+        const member = appData.members.find(m => m.id === item.id);
+        const equippedIcon = member ? getAchievementIcon(member.equipped) : '';
+        const avatarDisplay = (member && member.avatar) ? member.avatar : (item.name ? item.name.charAt(0) : '?');
+        const badgeContent = rank <= 3 ? medals[rank - 1] : rank;
+
+        return `
+          <div class="ranking-item ${rankClass}" onclick="showMyPage('${item.id}')" style="cursor:pointer;">
+            <div class="ranking-user">
+              <span class="rank-badge">${badgeContent}</span>
+              <div class="avatar-wrapper ranking">
+                <span class="ranking-avatar">${avatarDisplay}</span>
+                ${equippedIcon ? `<span class="equipped-badge" title="装備称号">${equippedIcon}</span>` : ''}
+              </div>
+              <span class="ranking-name">${escapeHtml(item.name)}</span>
+            </div>
+            <div class="ranking-score-box">
+              <div class="ranking-main-score">${mainScoreFn(item)}</div>
+              <div class="ranking-sub-score">${subScoreFn(item)}</div>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    /* ---------------------------------------------------------
+       ⑤ メンバータブ & 履歴
+       --------------------------------------------------------- */
+    function renderMembersTab() {
+      const container = document.getElementById('member-management-list');
+      container.innerHTML = '<h4 style="margin:0 0 10px 0;">👥 メンバー管理 (管理者限定)</h4>';
+      appData.members.forEach(m => {
+        const stats = appData.stats[m.id];
+        const badgeClass = stats.remainingGames <= 3 ? 'badge-red' : 'badge-green';
+        
+        container.innerHTML += `
+          <div style="display:flex; justify-content:space-between; padding:10px 0; border-bottom:1px solid #2d2d2d; align-items:center;">
+            <div>
+              <strong style="font-size:14px;">${escapeHtml(m.name)}</strong><br>
+              <span class="badge ${badgeClass}">残り ${stats.remainingGames} G</span>
+            </div>
+            <div style="display:flex; gap:4px;">
+              <button class="btn btn-primary btn-sm" onclick="showMyPage('${m.id}')">詳細</button>
+              <button class="btn btn-success btn-sm admin-only" onclick="showChargeModal('', '${m.id}', '${m.name}')">回数券+</button>
+              <button class="btn btn-secondary btn-sm admin-only" onclick="showEditMemberModal('${m.id}', '${m.name}')">編集</button>
+            </div>
+          </div>
+        `;
+      });
+    }
+
+    function renderHistory() {
+      const container = document.getElementById('history-list-container');
+      container.innerHTML = '';
+      appData.attendance.forEach(att => {
+        container.innerHTML += `
+          <div style="border-bottom: 1px solid #2d2d2d; padding: 10px 0; font-size:12px; display:flex; justify-content:space-between; align-items:center;">
+            <div>
+              <div style="font-weight:bold; color:#38bdf8;">${att.date} - ${escapeHtml(att.memberName)}</div>
+              <div style="color:#aaa; margin-top:2px;">
+                投球: ${att.gameCount}G | スコア: [${[att.g1, att.g2, att.g3, att.g4, att.g5].slice(0, att.gameCount).map(g => g !== null && g !== undefined ? g : '-').join(', ')}] | 合計: ${att.totalScore}
+              </div>
+            </div>
+            <button class="btn btn-secondary btn-sm admin-only" onclick="showEditScoreModal('${att.id}', '${att.memberId}', '${att.date}', ${att.gameCount}, ${att.g1}, ${att.g2}, ${att.g3}, ${att.g4}, ${att.g5})">編集</button>
+          </div>
+        `;
+      });
+    }
+
+    /* ---------------------------------------------------------
+       アチーブメント判定ロジック
+       --------------------------------------------------------- */
+    function checkAchievements(stats) {
+      if (!stats) return [];
+      const unlocked = [];
+      const scores = stats.scoresArray || [];
+      const attList = stats.gamesDetailArray || [];
+
+      if (stats.totalGameCount >= 1) unlocked.push('first');
+      if (stats.highScore >= 150) unlocked.push('score150');
+      if (stats.highScore >= 200) unlocked.push('score200');
+      if (stats.highScore >= 230) unlocked.push('score230');
+      if (stats.highScore >= 250) unlocked.push('score250');
+      if (stats.highScore >= 300) unlocked.push('score300');
+
+      if (stats.totalGameCount >= 10) unlocked.push('g10');
+      if (stats.totalGameCount >= 50) unlocked.push('g50');
+      if (stats.totalGameCount >= 100) unlocked.push('g100');
+      if (stats.totalGameCount >= 250) unlocked.push('g250');
+      if (stats.totalGameCount >= 500) unlocked.push('g500');
+      if (stats.totalGameCount >= 1000) unlocked.push('g1000');
+
+      if (stats.totalGameCount >= 15) {
+        if (stats.recent15Avg >= 150) unlocked.push('avg150');
+        if (stats.recent15Avg >= 180) unlocked.push('avg180');
+        if (stats.recent15Avg >= 200) unlocked.push('avg200');
+        if (stats.recent15Avg >= 210) unlocked.push('avg210');
+        if (stats.recent15Avg >= 220) unlocked.push('avg220');
+        if (stats.recent15Avg >= 230) unlocked.push('avg230');
+      }
+
+      let max3G = 0;
+      attList.forEach(att => {
+        if (att.gameCount === 3 && att.totalScore > max3G) max3G = att.totalScore;
+      });
+      if (max3G >= 400) unlocked.push('p400');
+      if (max3G >= 500) unlocked.push('p500');
+      if (max3G >= 600) unlocked.push('p600');
+      if (max3G >= 700) unlocked.push('p700');
+      if (max3G >= 800) unlocked.push('p800');
+      if (max3G >= 900) unlocked.push('p900');
+
+      if (stats.totalPacks >= 3) unlocked.push('pack3');
+      if (stats.totalPacks >= 10) unlocked.push('pack10');
+      if (stats.totalPacks >= 50) unlocked.push('pack50');
+      if (stats.totalPacks >= 100) unlocked.push('pack100');
+      if (stats.totalPacks >= 200) unlocked.push('pack200');
+
+      let hasZorome = false;
+      let hasSplit100 = false;
+      scores.forEach(s => {
+        if (s === 100) hasSplit100 = true;
+        if (s >= 111 && s <= 299 && s % 111 === 0) hasZorome = true;
+      });
+      if (hasZorome) unlocked.push('zorome');
+      if (hasSplit100) unlocked.push('split');
+
+      return unlocked;
+    }
+
+    function showAchievementDetail(achId, isUnlocked, isEquipped) {
+      const ach = ACHIEVEMENTS.find(a => a.id === achId);
+      selectedAchievementId = ach.id;
+      document.getElementById('ach-detail-icon').innerText = ach.icon;
+      document.getElementById('ach-detail-title').innerText = ach.name;
+      document.getElementById('ach-detail-desc').innerText = `【条件】${ach.desc}`;
+      
+      const statusBadge = document.getElementById('ach-detail-status');
+      const equipBtn = document.getElementById('ach-equip-btn');
+
+      if (isEquipped) {
+        statusBadge.innerText = '装備中'; statusBadge.className = 'badge badge-green';
+        equipBtn.style.display = 'none';
+      } else if (isUnlocked) {
+        statusBadge.innerText = '獲得済み'; statusBadge.className = 'badge badge-green';
+        equipBtn.style.display = 'inline-block';
+      } else {
+        statusBadge.innerText = '未獲得'; statusBadge.className = 'badge badge-gray';
+        equipBtn.style.display = 'none';
+      }
+      showModal('modal-achievement-detail');
+    }
+
+    function equipCurrentAchievement() {
+      google.script.run.withSuccessHandler(res => {
+        showToast(res.message);
+        closeModal('modal-achievement-detail');
+        closeModal('modal-mypage');
+        fetchData();
+      }).setEquippedAchievement(currentMyPageMemberId, selectedAchievementId);
+    }
+
+    /* ---------------------------------------------------------
+       アバター選択
+       --------------------------------------------------------- */
+    function showAvatarPicker() {
+      if (!currentMyPageMemberId) return;
+      const member = appData.members.find(m => m.id === currentMyPageMemberId);
+      const grid = document.getElementById('avatar-picker-grid');
+      grid.innerHTML = AVATAR_OPTIONS.map(emoji => `
+        <div class="avatar-picker-item ${member && member.avatar === emoji ? 'selected' : ''}" onclick="submitAvatarChoice('${emoji}')">${emoji}</div>
+      `).join('');
+      showModal('modal-avatar-picker');
+    }
+
+    function submitAvatarChoice(emoji) {
+      google.script.run.withSuccessHandler(res => {
+        showToast(res.message);
+        closeModal('modal-avatar-picker');
+        fetchData(() => {
+          renderMyPageData();
+        });
+      }).setAvatar(currentMyPageMemberId, emoji);
+    }
+
+    /* ---------------------------------------------------------
+       UI モーダル・タブ制御
+       --------------------------------------------------------- */
+    function switchTab(tabId) {
+      document.querySelectorAll('.tab-content').forEach(el => el.style.display = 'none');
+      document.getElementById(tabId).style.display = 'block';
+      document.querySelectorAll('.bottom-nav button').forEach(el => el.classList.remove('active'));
+      const activeBtn = document.getElementById(`tab-btn-${tabId.replace('tab-', '')}`);
+      if (activeBtn) activeBtn.classList.add('active');
+    }
+
+    function showModal(id) {
+      document.getElementById(id).style.display = 'flex';
+    }
+
+    function closeModal(id) {
+      document.getElementById(id).style.display = 'none';
+    }
+
+    function toggleAchievementList() {
+      const el = document.getElementById('mypage-ach-full');
+      const btn = document.getElementById('toggle-ach-btn');
+      if (el.style.display === 'none') {
+        el.style.display = 'block';
+        btn.innerText = '閉じる ▲';
+      } else {
+        el.style.display = 'none';
+        btn.innerText = '一覧を見る ▼';
+      }
+    }
+
+    function loginAdmin() {
+      const pass = document.getElementById('admin-pass').value;
+      document.getElementById('loading').style.display = 'block';
+      google.script.run.withSuccessHandler(isValid => {
+        document.getElementById('loading').style.display = 'none';
+        if (isValid) {
+          isAdmin = true;
+          document.body.classList.add('is-admin');
+          document.getElementById('mode-label').innerText = '管理者モード';
+          document.getElementById('mode-label').className = 'badge badge-green';
+          document.getElementById('admin-login-btn').style.display = 'none';
+          document.getElementById('admin-pass').value = '';
+          closeModal('modal-admin');
+          showToast('管理者としてログインしました');
+        } else {
+          showToast('パスワードが違います');
+        }
+      }).verifyAdminPassword(pass);
+    }
+
+    function openAdminSettings() {
+      const settings = appData.settings || { pricePerPack: 3000, gamesPerPack: 11 };
+      document.getElementById('settings-price-per-pack').value = settings.pricePerPack;
+      document.getElementById('settings-games-per-pack').value = settings.gamesPerPack;
+      document.getElementById('admin-pass-old').value = '';
+      document.getElementById('admin-pass-new').value = '';
+      document.getElementById('settings-confirm-pass').value = '';
+      showModal('modal-admin-settings');
+    }
+
+    function submitChangeAdminPassword() {
+      const oldPass = document.getElementById('admin-pass-old').value;
+      const newPass = document.getElementById('admin-pass-new').value;
+      if (!oldPass || !newPass) return showToast('現在／新しいパスワードを入力してください');
+      google.script.run.withSuccessHandler(res => {
+        showToast(res.message);
+        if (res.success) {
+          document.getElementById('admin-pass-old').value = '';
+          document.getElementById('admin-pass-new').value = '';
+        }
+      }).changeAdminPassword(oldPass, newPass);
+    }
+
+    function submitPackSettings() {
+      const price = document.getElementById('settings-price-per-pack').value;
+      const games = document.getElementById('settings-games-per-pack').value;
+      const confirmPass = document.getElementById('settings-confirm-pass').value;
+      if (!confirmPass) return showToast('確認用の管理者パスワードを入力してください');
+      google.script.run.withSuccessHandler(res => {
+        showToast(res.message);
+        if (res.success) {
+          document.getElementById('settings-confirm-pass').value = '';
+          fetchData();
+        }
+      }).updatePackSettings(confirmPass, price, games);
+    }
+
+    function logoutAdmin() {
+      isAdmin = false;
+      document.body.classList.remove('is-admin');
+      document.getElementById('mode-label').innerText = '閲覧モード';
+      document.getElementById('mode-label').className = 'badge badge-gray';
+      document.getElementById('admin-login-btn').style.display = 'inline-block';
+      showToast('ログアウトしました');
+    }
+
+    function showAddMemberModal() {
+      document.getElementById('new-member-name').value = '';
+      showModal('modal-add-member');
+    }
+
+    function submitAddMember() {
+      const name = document.getElementById('new-member-name').value;
+      if (!name) return showToast('氏名を入力してください');
+      google.script.run.withSuccessHandler(res => {
+        showToast(res.message);
+        closeModal('modal-add-member');
+        fetchData();
+      }).addMember(name);
+    }
+
+    function showEditMemberModal(id, name) {
+      document.getElementById('edit-member-id').value = id;
+      document.getElementById('edit-member-name').value = name;
+      showModal('modal-edit-member');
+    }
+
+    function submitUpdateMember() {
+      const id = document.getElementById('edit-member-id').value;
+      const name = document.getElementById('edit-member-name').value;
+      google.script.run.withSuccessHandler(res => {
+        showToast(res.message);
+        closeModal('modal-edit-member');
+        fetchData();
+      }).updateMember(id, name);
+    }
+
+    function executeDeleteMember() {
+      if (!confirm('本当にこのメンバーを退会処理しますか？')) return;
+      const id = document.getElementById('edit-member-id').value;
+      google.script.run.withSuccessHandler(res => {
+        showToast(res.message);
+        closeModal('modal-edit-member');
+        fetchData();
+      }).deleteMember(id);
+    }
+  </script>
+</body>
+</html>
