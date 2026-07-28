@@ -2080,7 +2080,7 @@ throwsは各投球の結果を表す文字列の配列。ストライクは"X"�
 scoreはそのフレーム時点の累積スコア(シートの数字欄そのまま)。10フレーム目は投球数が2〜3投になることがある。
 is_splitは、そのフレームの1投目のピン数の数字が丸(サークル)で囲まれている場合にtrue、それ以外はfalseにしてください。丸がなければ必ずfalseにしてください。}
 日付が印字されていれば YYYY-MM-DD 形式(西暦下2桁のみの場合は20を補う)でトップレベルのdateに入れてください。読み取れなければnullにしてください。
-出力は次の形式のJSONオブジェクトのみとし、説明文やコードブロック記号は一切含めないでください:
+出力は次の形式のJSONオブジェクトのみとし、説明文やコードブロック記号は一切含めないでください。インデントや改行、余分な空白を入れず、できるだけ詰めて出力してください:
 {"date": "YYYY-MM-DD"またはnull, "games": [ {"frames": [...10要素...]}, ... ]}`;
 
       try {
@@ -2090,7 +2090,7 @@ is_splitは、そのフレームの1投目のピン数の数字が丸(サーク�
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             contents: [{ parts: [{ text: prompt }, { inline_data: { mime_type: mime, data: base64 } }] }],
-            generationConfig: { responseMimeType: 'application/json', temperature: 0, maxOutputTokens: 4000 }
+            generationConfig: { responseMimeType: 'application/json', temperature: 0, maxOutputTokens: 8192 }
           })
         });
         if (!res.ok) {
@@ -2098,13 +2098,21 @@ is_splitは、そのフレームの1投目のピン数の数字が丸(サーク�
           throw new Error(`APIエラー (${res.status}): ${errText.slice(0, 150)}`);
         }
         const data = await res.json();
-        const text = data && data.candidates && data.candidates[0] && data.candidates[0].content
-          && data.candidates[0].content.parts && data.candidates[0].content.parts[0]
-          ? data.candidates[0].content.parts[0].text : null;
+        const candidate = data && data.candidates && data.candidates[0];
+        const text = candidate && candidate.content && candidate.content.parts && candidate.content.parts[0]
+          ? candidate.content.parts[0].text : null;
         if (!text) throw new Error('応答からテキストを取得できませんでした');
 
         const cleaned = text.trim().replace(/^```json\s*/i, '').replace(/^```\s*/, '').replace(/```\s*$/, '');
-        const parsed = JSON.parse(cleaned);
+        let parsed;
+        try {
+          parsed = JSON.parse(cleaned);
+        } catch (parseErr) {
+          if (candidate && candidate.finishReason === 'MAX_TOKENS') {
+            throw new Error('読み取り結果が長すぎて途中で切れました。写真を分割するか、もう一度試してください。');
+          }
+          throw new Error('読み取り結果の形式が正しくありませんでした。もう一度試してください。');
+        }
         const games = Array.isArray(parsed.games) ? parsed.games : [];
         if (games.length === 0) throw new Error('ゲームを読み取れませんでした。手入力してください。');
 
