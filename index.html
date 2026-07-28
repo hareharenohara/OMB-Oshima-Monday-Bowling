@@ -241,23 +241,17 @@
     .scan-preview-thumb { width: 36px; height: 36px; object-fit: cover; border-radius: 6px; border: 1px solid #444; display: none; }
     .input-box-wrap { position: relative; }
     .frame-badge { display: none; position: absolute; top: -6px; right: -2px; cursor: pointer; font-size: 13px; background: #1e1e1e; border: 1px solid #7c3aed; border-radius: 50%; width: 18px; height: 18px; line-height: 16px; text-align: center; }
-    .frame-edit-strip { display: flex; gap: 4px; overflow-x: auto; padding-bottom: 6px; }
-    .frame-edit-cell { flex: 0 0 auto; width: 54px; background: #121212; border: 1px solid #333; border-radius: 6px; overflow: hidden; }
-    .frame-edit-cell.frame10 { width: 72px; }
-    .frame-edit-cell .fe-idx { font-size: 9px; color: #888; text-align: center; padding: 3px 0; border-bottom: 1px solid #333; }
-    .frame-edit-cell .fe-throws { display: flex; padding: 5px 3px; gap: 2px; justify-content: center; min-height: 20px; }
-    .frame-edit-cell .fe-throws input { width: 16px; background: transparent; border: none; color: #facc15; font-family: monospace; font-size: 13px; text-align: center; border-bottom: 1px solid #333; padding: 1px 0; }
-    .frame-edit-cell .fe-score { text-align: center; font-size: 14px; color: #e0e0e0; border-top: 1px solid #333; padding: 4px 0; }
-    .frame-edit-cell .fe-score input { width: 100%; background: transparent; border: none; color: #e0e0e0; font-family: monospace; font-size: 14px; text-align: center; }
-    .frame-edit-cell .fe-split { display: flex; align-items: center; justify-content: center; gap: 2px; font-size: 10px; padding: 3px 0; border-top: 1px solid #333; color: #888; cursor: pointer; }
-    .frame-edit-cell .fe-split input { margin: 0; }
-    .frame-view-strip { display: flex; gap: 4px; overflow-x: auto; padding-bottom: 6px; margin-bottom: 12px; }
-    .frame-view-cell { flex: 0 0 auto; width: 42px; background: #121212; border: 1px solid #333; border-radius: 6px; overflow: hidden; }
-    .frame-view-cell.frame10 { width: 58px; }
-    .frame-view-cell.split { border-color: #f87171; }
-    .frame-view-cell .fv-idx { font-size: 9px; color: #888; text-align: center; padding: 2px 0; border-bottom: 1px solid #333; }
-    .frame-view-cell .fv-throws { display: flex; gap: 2px; justify-content: center; padding: 4px 2px; font-size: 12px; color: #facc15; font-family: monospace; min-height: 16px; }
-    .frame-view-cell .fv-score { text-align: center; font-size: 13px; color: #e0e0e0; border-top: 1px solid #333; padding: 3px 0; }
+    .scoreboard-strip { display: grid; grid-template-columns: repeat(9, 1fr) 1.3fr; gap: 2px; width: 100%; margin-bottom: 10px; }
+    .scoreboard-frame { background: #121212; border: 1px solid #333; border-radius: 4px; overflow: hidden; min-width: 0; }
+    .scoreboard-frame.split { border-color: #f87171; }
+    .scoreboard-frame .sb-idx { font-size: 8px; color: #888; text-align: center; padding: 1px 0; border-bottom: 1px solid #333; }
+    .scoreboard-frame .sb-throws { display: flex; min-height: 16px; }
+    .scoreboard-frame .sb-throws > span, .scoreboard-frame .sb-throws > input { flex: 1 1 0; min-width: 0; text-align: center; font-size: 10px; color: #facc15; font-family: monospace; border-right: 1px solid #333; padding: 2px 0; background: transparent; border-top: none; border-bottom: none; border-left: none; }
+    .scoreboard-frame .sb-throws > span:last-child, .scoreboard-frame .sb-throws > input:last-child { border-right: none; }
+    .scoreboard-frame .sb-score { text-align: center; font-size: 11px; color: #e0e0e0; border-top: 1px solid #333; padding: 2px 0; font-family: monospace; }
+    .scoreboard-frame .sb-score input { width: 100%; background: transparent; border: none; color: #e0e0e0; font-family: monospace; font-size: 11px; text-align: center; padding: 0; }
+    .scoreboard-frame .sb-split-toggle { display: flex; justify-content: center; align-items: center; padding: 1px 0; border-top: 1px solid #333; }
+    .scoreboard-frame .sb-split-toggle input { margin: 0; width: 11px; height: 11px; }
     .game-detail-label { font-size: 13px; font-weight: bold; color: #38bdf8; margin-bottom: 4px; }
 
     /* テーブル・アコーディオン */
@@ -787,7 +781,7 @@
       <input type="hidden" id="frame-edit-member-id">
       <input type="hidden" id="frame-edit-game-number">
       <div class="table-scroll">
-        <div class="frame-edit-strip" id="frame-edit-strip"></div>
+        <div class="scoreboard-strip" id="frame-edit-strip"></div>
       </div>
       <div style="text-align:right; margin-top:10px; font-size:14px;">
         合計: <strong id="frame-edit-total" style="color:#38bdf8; font-size:18px;">0</strong> 点
@@ -2188,25 +2182,28 @@ is_splitは、そのフレームの1投目のピン数の数字が丸(サーク�
       strip.innerHTML = '';
       frames.forEach((f, idx) => {
         const cell = document.createElement('div');
-        cell.className = 'frame-edit-cell' + (idx === 9 ? ' frame10' : '');
+        cell.className = 'scoreboard-frame' + (f.is_split ? ' split' : '');
         const throwsArr = f.throws.length ? f.throws : ['', ''];
-        const throwsHtml = throwsArr.map(t => `<input type="text" class="fe-throw" maxlength="2" value="${escapeHtml(String(t))}">`).join('');
+        const throwsHtml = throwsArr.map(t => `<input type="text" class="sb-throw" maxlength="2" value="${escapeHtml(String(t))}">`).join('');
         cell.innerHTML = `
-          <div class="fe-idx">${idx + 1}</div>
-          <div class="fe-throws">${throwsHtml}</div>
-          <div class="fe-score"><input type="text" class="fe-score-input" value="${f.score != null ? f.score : ''}"></div>
-          <label class="fe-split"><input type="checkbox" class="fe-split-check" ${f.is_split ? 'checked' : ''}>🔴</label>
+          <div class="sb-idx">${idx + 1}</div>
+          <div class="sb-throws">${throwsHtml}</div>
+          <div class="sb-score"><input type="text" class="sb-score-input" value="${f.score != null ? f.score : ''}"></div>
+          <div class="sb-split-toggle"><input type="checkbox" class="sb-split-check" title="スプリット" ${f.is_split ? 'checked' : ''}></div>
         `;
         strip.appendChild(cell);
       });
       strip.querySelectorAll('input[type="text"]').forEach(inp => inp.addEventListener('input', recalcFrameEditTotal));
+      strip.querySelectorAll('.sb-split-check').forEach(chk => chk.addEventListener('change', (e) => {
+        e.target.closest('.scoreboard-frame').classList.toggle('split', e.target.checked);
+      }));
     }
 
     function recalcFrameEditTotal() {
-      const cells = document.querySelectorAll('#frame-edit-strip .frame-edit-cell');
+      const cells = document.querySelectorAll('#frame-edit-strip .scoreboard-frame');
       let last = null;
       cells.forEach(cell => {
-        const sc = cell.querySelector('.fe-score-input').value;
+        const sc = cell.querySelector('.sb-score-input').value;
         if (sc !== '') last = Number(sc);
       });
       document.getElementById('frame-edit-total').textContent = last != null ? last : '-';
@@ -2215,11 +2212,11 @@ is_splitは、そのフレームの1投目のピン数の数字が丸(サーク�
     function saveFrameEdit() {
       const memberId = document.getElementById('frame-edit-member-id').value;
       const gameNumber = Number(document.getElementById('frame-edit-game-number').value);
-      const cells = document.querySelectorAll('#frame-edit-strip .frame-edit-cell');
+      const cells = document.querySelectorAll('#frame-edit-strip .scoreboard-frame');
       const frames = Array.from(cells).map(cell => ({
-        throws: Array.from(cell.querySelectorAll('.fe-throw')).map(i => i.value.trim()).filter(v => v !== ''),
-        score: (() => { const v = cell.querySelector('.fe-score-input').value; return v === '' ? null : Number(v); })(),
-        is_split: cell.querySelector('.fe-split-check').checked
+        throws: Array.from(cell.querySelectorAll('.sb-throw')).map(i => i.value.trim()).filter(v => v !== ''),
+        score: (() => { const v = cell.querySelector('.sb-score-input').value; return v === '' ? null : Number(v); })(),
+        is_split: cell.querySelector('.sb-split-check').checked
       }));
       const total = computeTotalFromFrames(frames);
       if (!scannedFrameData[memberId]) scannedFrameData[memberId] = {};
@@ -3231,10 +3228,10 @@ is_splitは、そのフレームの1投目のピン数の数字が丸(サーク�
       return frames.map((f, idx) => {
         const throwsHtml = (f.throws && f.throws.length ? f.throws : ['-']).map(t => `<span>${escapeHtml(String(t))}</span>`).join('');
         return `
-          <div class="frame-view-cell${idx === 9 ? ' frame10' : ''}${f.is_split ? ' split' : ''}">
-            <div class="fv-idx">${idx + 1}</div>
-            <div class="fv-throws">${throwsHtml}</div>
-            <div class="fv-score">${f.score != null ? f.score : '-'}</div>
+          <div class="scoreboard-frame${f.is_split ? ' split' : ''}">
+            <div class="sb-idx">${idx + 1}</div>
+            <div class="sb-throws">${throwsHtml}</div>
+            <div class="sb-score">${f.score != null ? f.score : '-'}</div>
           </div>
         `;
       }).join('');
@@ -3263,7 +3260,7 @@ is_splitは、そのフレームの1投目のピン数の数字が丸(サーク�
           return `
             <div style="margin-bottom:14px;">
               <div class="game-detail-label">${g.gameNumber}G: ${g.score != null ? g.score : '-'}点</div>
-              <div class="frame-view-strip">${renderFrameViewStrip(g.frames)}</div>
+              <div class="scoreboard-strip">${renderFrameViewStrip(g.frames)}</div>
             </div>
           `;
         }).join('');
