@@ -232,6 +232,34 @@
     .input-box-wrap label { font-size: 11px; color: #888; display: block; margin-bottom: 2px; text-align: center; }
     .input-box { width: 100%; text-align: center; font-size: 16px; font-weight: bold; }
 
+    /* スコア表 写真読み取り */
+    .scan-row { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+    .btn-scan-photo { background-color: #7c3aed; white-space: nowrap; }
+    .scan-status-text { font-size: 11px; color: #aaa; flex: 1; }
+    .scan-status-text.err { color: #f87171; }
+    .scan-status-text.ok { color: #4ade80; }
+    .scan-preview-thumb { width: 36px; height: 36px; object-fit: cover; border-radius: 6px; border: 1px solid #444; display: none; }
+    .input-box-wrap { position: relative; }
+    .frame-badge { display: none; position: absolute; top: -6px; right: -2px; cursor: pointer; font-size: 13px; background: #1e1e1e; border: 1px solid #7c3aed; border-radius: 50%; width: 18px; height: 18px; line-height: 16px; text-align: center; }
+    .frame-edit-strip { display: flex; gap: 4px; overflow-x: auto; padding-bottom: 6px; }
+    .frame-edit-cell { flex: 0 0 auto; width: 54px; background: #121212; border: 1px solid #333; border-radius: 6px; overflow: hidden; }
+    .frame-edit-cell.frame10 { width: 72px; }
+    .frame-edit-cell .fe-idx { font-size: 9px; color: #888; text-align: center; padding: 3px 0; border-bottom: 1px solid #333; }
+    .frame-edit-cell .fe-throws { display: flex; padding: 5px 3px; gap: 2px; justify-content: center; min-height: 20px; }
+    .frame-edit-cell .fe-throws input { width: 16px; background: transparent; border: none; color: #facc15; font-family: monospace; font-size: 13px; text-align: center; border-bottom: 1px solid #333; padding: 1px 0; }
+    .frame-edit-cell .fe-score { text-align: center; font-size: 14px; color: #e0e0e0; border-top: 1px solid #333; padding: 4px 0; }
+    .frame-edit-cell .fe-score input { width: 100%; background: transparent; border: none; color: #e0e0e0; font-family: monospace; font-size: 14px; text-align: center; }
+    .frame-edit-cell .fe-split { display: flex; align-items: center; justify-content: center; gap: 2px; font-size: 10px; padding: 3px 0; border-top: 1px solid #333; color: #888; cursor: pointer; }
+    .frame-edit-cell .fe-split input { margin: 0; }
+    .frame-view-strip { display: flex; gap: 4px; overflow-x: auto; padding-bottom: 6px; margin-bottom: 12px; }
+    .frame-view-cell { flex: 0 0 auto; width: 42px; background: #121212; border: 1px solid #333; border-radius: 6px; overflow: hidden; }
+    .frame-view-cell.frame10 { width: 58px; }
+    .frame-view-cell.split { border-color: #f87171; }
+    .frame-view-cell .fv-idx { font-size: 9px; color: #888; text-align: center; padding: 2px 0; border-bottom: 1px solid #333; }
+    .frame-view-cell .fv-throws { display: flex; gap: 2px; justify-content: center; padding: 4px 2px; font-size: 12px; color: #facc15; font-family: monospace; min-height: 16px; }
+    .frame-view-cell .fv-score { text-align: center; font-size: 13px; color: #e0e0e0; border-top: 1px solid #333; padding: 3px 0; }
+    .game-detail-label { font-size: 13px; font-weight: bold; color: #38bdf8; margin-bottom: 4px; }
+
     /* テーブル・アコーディオン */
     table { width: 100%; border-collapse: collapse; font-size: 12px; }
     th, td { border-bottom: 1px solid #2d2d2d; padding: 8px; text-align: left; }
@@ -617,6 +645,36 @@
           <div class="ranking-section-title" onclick="showRankingInfo('giant')">⚔️ ジャイアントキリングランキング <span style="font-size:11px; color:#666;">ℹ️</span></div>
           <div id="ranking-giant" class="ranking-list"></div>
         </div>
+
+        <div class="ranking-section">
+          <div class="ranking-section-title" onclick="showRankingInfo('strikeRate')">🎯 ストライク率ランキング <span style="font-size:11px; color:#666;">ℹ️</span></div>
+          <div id="ranking-strike-rate" class="ranking-list"></div>
+        </div>
+
+        <div class="ranking-section">
+          <div class="ranking-section-title" onclick="showRankingInfo('openFrame')">🛡️ オープンフレーム率ランキング <span style="font-size:11px; color:#666;">ℹ️</span></div>
+          <div id="ranking-open-frame" class="ranking-list"></div>
+        </div>
+
+        <div class="ranking-section">
+          <div class="ranking-section-title" onclick="showRankingInfo('splitCover')">🔴 スプリットカバー率ランキング <span style="font-size:11px; color:#666;">ℹ️</span></div>
+          <div id="ranking-split-cover" class="ranking-list"></div>
+        </div>
+
+        <div class="ranking-section">
+          <div class="ranking-section-title" onclick="showRankingInfo('doubleTurkey')">💥 ダブル・ターキー発生率ランキング <span style="font-size:11px; color:#666;">ℹ️</span></div>
+          <div id="ranking-double-turkey" class="ranking-list"></div>
+        </div>
+
+        <div class="ranking-section">
+          <div class="ranking-section-title" onclick="showRankingInfo('frame10')">🔟 10フレーム目 平均獲得点ランキング <span style="font-size:11px; color:#666;">ℹ️</span></div>
+          <div id="ranking-frame10" class="ranking-list"></div>
+        </div>
+
+        <div class="ranking-section">
+          <div class="ranking-section-title" onclick="showRankingInfo('fba')">🥎 1球平均倒ピン数ランキング <span style="font-size:11px; color:#666;">ℹ️</span></div>
+          <div id="ranking-fba" class="ranking-list"></div>
+        </div>
       </div>
     </div>
 
@@ -707,6 +765,38 @@
         <div style="display:flex; gap: 8px;">
           <button class="btn btn-secondary" onclick="closeModal('modal-edit-score')">キャンセル</button>
           <button class="btn btn-success admin-only" onclick="submitUpdateScore()">更新保存</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="modal-game-detail" class="modal" style="z-index:1700;">
+    <div class="modal-content" style="max-width: 480px;">
+      <h3 style="margin-top:0;" id="game-detail-title">🎳 ゲーム詳細</h3>
+      <div id="game-detail-content"></div>
+      <div style="text-align:right; margin-top: 15px;">
+        <button class="btn btn-secondary" onclick="closeModal('modal-game-detail')">閉じる</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="modal-frame-edit" class="modal" style="z-index:1700;">
+    <div class="modal-content" style="max-width: 480px;">
+      <h3 style="margin-top:0;">🎳 フレーム詳細の確認・修正</h3>
+      <p style="font-size:12px; color:#aaa; margin-top:-6px;">写真からの読み取り結果です。誤りがあれば修正してから反映してください。</p>
+      <input type="hidden" id="frame-edit-member-id">
+      <input type="hidden" id="frame-edit-game-number">
+      <div class="table-scroll">
+        <div class="frame-edit-strip" id="frame-edit-strip"></div>
+      </div>
+      <div style="text-align:right; margin-top:10px; font-size:14px;">
+        合計: <strong id="frame-edit-total" style="color:#38bdf8; font-size:18px;">0</strong> 点
+      </div>
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-top: 15px;">
+        <button class="btn btn-danger btn-sm" onclick="clearFrameEditData()">詳細を削除(合計のみにする)</button>
+        <div style="display:flex; gap: 8px;">
+          <button class="btn btn-secondary" onclick="closeModal('modal-frame-edit')">キャンセル</button>
+          <button class="btn btn-success" onclick="saveFrameEdit()">この内容で反映</button>
         </div>
       </div>
     </div>
@@ -825,6 +915,21 @@
         </div>
         <div style="display:flex; justify-content:space-between;">
           <span>最高スコア:</span><strong id="mypage-high"></strong>
+        </div>
+      </div>
+
+      <!-- 4.5 フレーム詳細統計 -->
+      <div style="background: #252525; padding: 10px; border-radius: 8px; margin-bottom: 12px; font-size: 13px;">
+        <div style="font-weight:bold; margin-bottom:6px;">🎯 投球詳細統計 <span id="mypage-frame-stats-note" style="color:#888; font-size:11px; font-weight:normal;"></span></div>
+        <div id="mypage-frame-stats-body">
+          <div style="display:flex; justify-content:space-between; margin-bottom: 4px;"><span>1球平均倒ピン数:</span><strong id="mypage-fba">-</strong></div>
+          <div style="display:flex; justify-content:space-between; margin-bottom: 4px;"><span>ストライク率:</span><strong id="mypage-strike-rate">-</strong></div>
+          <div style="display:flex; justify-content:space-between; margin-bottom: 4px;"><span>マーク率:</span><strong id="mypage-mark-rate">-</strong></div>
+          <div style="display:flex; justify-content:space-between; margin-bottom: 4px;"><span>オープンフレーム率:</span><strong id="mypage-open-rate">-</strong></div>
+          <div style="display:flex; justify-content:space-between; margin-bottom: 4px;"><span>スプリットのカバー確率:</span><strong id="mypage-splitcover">-</strong></div>
+          <div style="display:flex; justify-content:space-between; margin-bottom: 4px;"><span>10フレーム目 平均獲得点:</span><strong id="mypage-f10avg">-</strong></div>
+          <div style="display:flex; justify-content:space-between; margin-bottom: 4px;"><span>ダブル発生(1ゲーム平均):</span><strong id="mypage-doubles">-</strong></div>
+          <div style="display:flex; justify-content:space-between;"><span>ターキー発生(1ゲーム平均):</span><strong id="mypage-turkeys">-</strong></div>
         </div>
       </div>
 
@@ -998,7 +1103,47 @@
 
       // 特殊・ネタ系
       { id: 'zorome', icon: '🎰', name: 'ゾロ目賞', desc: '1Gのスコアでゾロ目(111, 222等)を出した' }, // 元のまま。スロット
-      { id: 'split', icon: '💯', name: 'ぴったり100', desc: '1Gでジャスト100点を記録した' } // 🎯より直球で「100点満点（100ジャスト）」のマーク
+      { id: 'split', icon: '💯', name: 'ぴったり100', desc: '1Gでジャスト100点を記録した' }, // 🎯より直球で「100点満点（100ジャスト）」のマーク
+
+      // ストライク率系(通算、フレーム詳細15G以上が前提)
+      { id: 'strikerate50', icon: '🎯', name: '射抜き手', desc: '通算ストライク率50%以上 (フレーム詳細15G以上)' },
+      { id: 'strikerate60', icon: '🥊', name: '一撃必倒', desc: '通算ストライク率60%以上 (フレーム詳細15G以上)' },
+      { id: 'strikerate70', icon: '🦖', name: 'ストライクモンスター', desc: '通算ストライク率70%以上 (フレーム詳細15G以上)' },
+      { id: 'strikerate80', icon: '⚡', name: 'ストライクマシーン', desc: '通算ストライク率80%以上 (フレーム詳細15G以上)' },
+
+      // オープンフレーム率系(通算、低いほど堅実。フレーム詳細15G以上が前提)
+      { id: 'lowopen30', icon: '🛡️', name: '堅実な壁', desc: '通算オープンフレーム率30%未満 (フレーム詳細15G以上)' },
+      { id: 'lowopen20', icon: '🗿', name: '鉄壁', desc: '通算オープンフレーム率20%未満 (フレーム詳細15G以上)' },
+      { id: 'lowopen10', icon: '⚔️', name: '無失点の刃', desc: '通算オープンフレーム率10%未満 (フレーム詳細15G以上)' },
+      { id: 'lowopen5', icon: '👑', name: '完全無欠', desc: '通算オープンフレーム率5%未満 (フレーム詳細15G以上)' },
+
+      // スプリットカバー系(通算カバー回数)
+      { id: 'splitcover1', icon: '🔴', name: '初カバー', desc: 'スプリットを初めてカバー(スペア)した' },
+      { id: 'splitcover10', icon: '🧨', name: 'スプリットハンター', desc: 'スプリットを通算10回カバーした' },
+      { id: 'splitcover30', icon: '🌪️', name: 'スプリットスレイヤー', desc: 'スプリットを通算30回カバーした' },
+      { id: 'splitcover50', icon: '🦂', name: 'スプリットマスター', desc: 'スプリットを通算50回カバーした' },
+
+      // ターキー系(通算達成回数、3連続以上ストライク)
+      { id: 'turkey1', icon: '🦃', name: '初ターキー', desc: '1ゲームでターキー(3連続ストライク)を初めて達成した' },
+      { id: 'turkey5', icon: '🐓', name: '七面鳥使い', desc: '通算5回ターキーを達成した' },
+      { id: 'turkey20', icon: '🦉', name: '連続の覇者', desc: '通算20回ターキーを達成した' },
+      { id: 'turkey50', icon: '🐲', name: '連撃の化身', desc: '通算50回ターキーを達成した' },
+
+      // 10フレーム目 大量得点系(1ゲームごとの10フレーム目獲得点、最大30点)
+      { id: 'f10_20', icon: '🎇', name: '有終の美', desc: '10フレーム目で20点以上獲得した' },
+      { id: 'f10_25', icon: '🌠', name: '有終の華', desc: '10フレーム目で25点以上獲得した' },
+      { id: 'f10_30', icon: '💫', name: '有終の極み', desc: '10フレーム目でパーフェクト(30点)を獲得した' },
+
+      // 1球平均倒ピン数系(通算、フレーム詳細15G以上が前提)
+      { id: 'fba7', icon: '🥎', name: '安定打球', desc: '1球平均倒ピン数7.0本以上 (フレーム詳細15G以上)' },
+      { id: 'fba8', icon: '🏓', name: '高精度打球', desc: '1球平均倒ピン数8.0本以上 (フレーム詳細15G以上)' },
+      { id: 'fba9', icon: '🔥', name: '完璧に近い一投', desc: '1球平均倒ピン数9.0本以上 (フレーム詳細15G以上)' },
+
+      // メタ:アチーブメント解放数系
+      { id: 'meta10', icon: '🎖️', name: '実績コレクター', desc: '他のアチーブメントを10個解放した' },
+      { id: 'meta25', icon: '🏆', name: '実績ハンター', desc: '他のアチーブメントを25個解放した' },
+      { id: 'meta40', icon: '🎗️', name: '実績マイスター', desc: '他のアチーブメントを40個解放した' },
+      { id: 'meta50', icon: '🔮', name: '伝説の実績王', desc: '他のアチーブメントを50個解放した' }
     ];
 
 const AVATAR_OPTIONS = [
@@ -1347,7 +1492,7 @@ const AVATAR_OPTIONS = [
           supabaseClient.from('members').select('*'),
           supabaseClient
             .from('sessions')
-            .select('id, date, member_id, game_count, created_at, games(game_number, score)')
+            .select('id, date, member_id, game_count, created_at, games(id, game_number, score, frames(frame_number, throws, score, is_split))')
             .order('date', { ascending: true })
             .order('created_at', { ascending: true }),
           supabaseClient
@@ -1426,6 +1571,19 @@ const AVATAR_OPTIONS = [
             s.gamesDetailArray.push({ date: row.date, g1, g2, g3, g4, g5, totalScore, gameCount: row.game_count });
           }
 
+          const gamesDetail = (row.games || [])
+            .slice()
+            .sort((a, b) => a.game_number - b.game_number)
+            .map(g => ({
+              id: g.id,
+              gameNumber: g.game_number,
+              score: g.score,
+              frames: (g.frames || [])
+                .slice()
+                .sort((a, b) => a.frame_number - b.frame_number)
+                .map(f => ({ throws: f.throws || [], score: f.score, is_split: !!f.is_split }))
+            }));
+
           return {
             id: row.id,
             date: row.date,
@@ -1433,8 +1591,15 @@ const AVATAR_OPTIONS = [
             memberName: memberNameById[row.member_id] || '不明',
             gameCount: row.game_count,
             g1, g2, g3, g4, g5,
-            totalScore
+            totalScore,
+            games: gamesDetail
           };
+        });
+
+        // アチーブメント判定用に、メンバーごとの通算フレーム詳細統計を付与
+        members.forEach(m => {
+          const memberAtt = attendance.filter(a => a.memberId === m.id);
+          stats[m.id].frameStats = computeAdvancedFrameStats(memberAtt);
         });
 
         // 統計計算（GAS版と同じロジック）
@@ -1499,15 +1664,33 @@ const AVATAR_OPTIONS = [
           return { success: false, message: sessErr.message };
         }
 
-        const gameRows = [];
+        const gameDefs = [];
         [r.g1, r.g2, r.g3, r.g4, r.g5].forEach((score, idx) => {
           if (score !== null && score !== undefined && score !== '') {
-            gameRows.push({ session_id: session.id, game_number: idx + 1, score: score });
+            gameDefs.push({ gameNumber: idx + 1, score: score });
           }
         });
-        if (gameRows.length > 0) {
-          const { error: gameErr } = await supabaseClient.from('games').insert(gameRows);
+
+        for (const gd of gameDefs) {
+          const { data: gameRow, error: gameErr } = await supabaseClient
+            .from('games')
+            .insert({ session_id: session.id, game_number: gd.gameNumber, score: gd.score })
+            .select('id')
+            .single();
           if (gameErr) return { success: false, message: gameErr.message };
+
+          const frameDetail = r.frames && r.frames[gd.gameNumber];
+          if (frameDetail && frameDetail.frames && frameDetail.frames.length) {
+            const frameRows = frameDetail.frames.map((f, idx) => ({
+              game_id: gameRow.id,
+              frame_number: idx + 1,
+              throws: f.throws || [],
+              score: (f.score === '' || f.score == null) ? null : f.score,
+              is_split: !!f.is_split
+            }));
+            const { error: frameErr } = await supabaseClient.from('frames').insert(frameRows);
+            if (frameErr) return { success: false, message: frameErr.message };
+          }
         }
       }
       return { success: true, message: 'スコアを保存しました。' };
@@ -1709,6 +1892,12 @@ const AVATAR_OPTIONS = [
               <span>最高: <strong>${stats.highScore}</strong></span>
               <span>総投球: <strong>${stats.totalGameCount}G</strong></span>
             </div>
+            <div class="scan-row">
+              <img class="scan-preview-thumb" id="scan-thumb-${member.id}" alt="">
+              <button type="button" class="btn btn-sm btn-scan-photo" onclick="triggerScorePhoto('${member.id}')">📷 結果票を読み取る</button>
+              <span class="scan-status-text" id="scan-status-${member.id}"></span>
+              <input type="file" accept="image/*" capture="environment" id="scan-file-${member.id}" style="display:none;" onchange="handleScorePhotoSelected('${member.id}', this)">
+            </div>
             <div style="display:flex; justify-content:space-between; align-items:center; font-size:12px; margin-bottom:8px;">
               <span>投球G数: 
                 <select id="gc-${member.id}" onchange="updatePreview('${member.id}'); updateGameSlots('${member.id}')" style="padding:2px 4px;">
@@ -1722,11 +1911,11 @@ const AVATAR_OPTIONS = [
               <button class="btn btn-success btn-sm admin-only" onclick="showChargeModal('', '${member.id}', '${member.name}')">🎟️ 回数券追加</button>
             </div>
             <div class="input-grid">
-              <div class="input-box-wrap"><label>1G</label><input type="number" id="g1-${member.id}" class="input-box" placeholder="0" oninput="calcTotal('${member.id}')"></div>
-              <div class="input-box-wrap"><label>2G</label><input type="number" id="g2-${member.id}" class="input-box" placeholder="0" oninput="calcTotal('${member.id}')"></div>
-              <div class="input-box-wrap"><label>3G</label><input type="number" id="g3-${member.id}" class="input-box" placeholder="0" oninput="calcTotal('${member.id}')"></div>
-              <div class="input-box-wrap hidden-slot" id="g4-wrap-${member.id}"><label>4G</label><input type="number" id="g4-${member.id}" class="input-box" placeholder="0" oninput="calcTotal('${member.id}')"></div>
-              <div class="input-box-wrap hidden-slot" id="g5-wrap-${member.id}"><label>5G</label><input type="number" id="g5-${member.id}" class="input-box" placeholder="0" oninput="calcTotal('${member.id}')"></div>
+              <div class="input-box-wrap"><label>1G</label><input type="number" id="g1-${member.id}" class="input-box" placeholder="0" oninput="onGameInputChanged('${member.id}', 1)"><span class="frame-badge" id="frame-badge-1-${member.id}" onclick="openFrameEditModal('${member.id}', 1)" title="フレーム詳細を確認">📋</span></div>
+              <div class="input-box-wrap"><label>2G</label><input type="number" id="g2-${member.id}" class="input-box" placeholder="0" oninput="onGameInputChanged('${member.id}', 2)"><span class="frame-badge" id="frame-badge-2-${member.id}" onclick="openFrameEditModal('${member.id}', 2)" title="フレーム詳細を確認">📋</span></div>
+              <div class="input-box-wrap"><label>3G</label><input type="number" id="g3-${member.id}" class="input-box" placeholder="0" oninput="onGameInputChanged('${member.id}', 3)"><span class="frame-badge" id="frame-badge-3-${member.id}" onclick="openFrameEditModal('${member.id}', 3)" title="フレーム詳細を確認">📋</span></div>
+              <div class="input-box-wrap hidden-slot" id="g4-wrap-${member.id}"><label>4G</label><input type="number" id="g4-${member.id}" class="input-box" placeholder="0" oninput="onGameInputChanged('${member.id}', 4)"><span class="frame-badge" id="frame-badge-4-${member.id}" onclick="openFrameEditModal('${member.id}', 4)" title="フレーム詳細を確認">📋</span></div>
+              <div class="input-box-wrap hidden-slot" id="g5-wrap-${member.id}"><label>5G</label><input type="number" id="g5-${member.id}" class="input-box" placeholder="0" oninput="onGameInputChanged('${member.id}', 5)"><span class="frame-badge" id="frame-badge-5-${member.id}" onclick="openFrameEditModal('${member.id}', 5)" title="フレーム詳細を確認">📋</span></div>
             </div>
             <div id="calc-result-${member.id}" style="text-align:right; font-size:12px; font-weight:bold; margin-top:6px; color:#38bdf8;"></div>
           </div>
@@ -1782,8 +1971,8 @@ const AVATAR_OPTIONS = [
       const g5Wrap = document.getElementById(`g5-wrap-${memberId}`);
       g4Wrap.classList.toggle('hidden-slot', gc < 4);
       g5Wrap.classList.toggle('hidden-slot', gc < 5);
-      if (gc < 4) document.getElementById(`g4-${memberId}`).value = '';
-      if (gc < 5) document.getElementById(`g5-${memberId}`).value = '';
+      if (gc < 4) { document.getElementById(`g4-${memberId}`).value = ''; if (scannedFrameData[memberId]) delete scannedFrameData[memberId][4]; updateFrameBadge(memberId, 4); }
+      if (gc < 5) { document.getElementById(`g5-${memberId}`).value = ''; if (scannedFrameData[memberId]) delete scannedFrameData[memberId][5]; updateFrameBadge(memberId, 5); }
       calcTotal(memberId);
     }
 
@@ -1796,6 +1985,253 @@ const AVATAR_OPTIONS = [
       const sum = g1 + g2 + g3 + g4 + g5;
       document.getElementById(`calc-result-${memberId}`).innerText = `合計: ${sum} 点`;
     }
+
+    // 手入力で数値が変更されたら、その回はもうスキャン結果と一致しないのでフレーム詳細を破棄する
+    function onGameInputChanged(memberId, gameNumber) {
+      const input = document.getElementById(`g${gameNumber}-${memberId}`);
+      const current = input.value === '' ? null : Number(input.value);
+      const fd = scannedFrameData[memberId] && scannedFrameData[memberId][gameNumber];
+      if (fd && fd.total !== current) {
+        delete scannedFrameData[memberId][gameNumber];
+        updateFrameBadge(memberId, gameNumber);
+      }
+      calcTotal(memberId);
+    }
+
+    /* ---------------------------------------------------------
+       個人結果票の写真読み取り (bowling-scoreboard.html と同じ
+       localStorageキーを共有し、そちらで登録したGemini APIキー
+       をそのまま流用する)。1フレームごとの投球結果まで読み取り、
+       framesテーブルに保存できる形で保持する。
+       --------------------------------------------------------- */
+    const SCAN_LS_KEY_API = 'bowling_api_key';
+    const SCAN_LS_KEY_MODEL = 'bowling_model';
+    // scannedFrameData[memberId][gameNumber] = { frames: [10要素], total: 数値|null }
+    const scannedFrameData = {};
+
+    function getScanApiKey() {
+      let key = localStorage.getItem(SCAN_LS_KEY_API) || '';
+      if (!key) {
+        key = (window.prompt('Gemini APIキーが未設定です。\n(bowling-scoreboard.htmlで設定済みなら同じ端末・同じサイトであれば自動で共有されます)\n\nAPIキーを入力してください:') || '').trim();
+        if (key) localStorage.setItem(SCAN_LS_KEY_API, key);
+      }
+      return key;
+    }
+    function getScanModel() {
+      return localStorage.getItem(SCAN_LS_KEY_MODEL) || 'gemini-3.6-flash';
+    }
+
+    function triggerScorePhoto(memberId) {
+      document.getElementById(`scan-file-${memberId}`).click();
+    }
+
+    function setScanStatus(memberId, text, cls) {
+      const el = document.getElementById(`scan-status-${memberId}`);
+      el.textContent = text;
+      el.className = 'scan-status-text' + (cls ? ' ' + cls : '');
+    }
+
+    function updateFrameBadge(memberId, gameNumber) {
+      const badge = document.getElementById(`frame-badge-${gameNumber}-${memberId}`);
+      if (!badge) return;
+      const has = !!(scannedFrameData[memberId] && scannedFrameData[memberId][gameNumber]);
+      badge.style.display = has ? 'inline' : 'none';
+    }
+
+    function handleScorePhotoSelected(memberId, inputEl) {
+      const file = inputEl.files && inputEl.files[0];
+      if (!file) return;
+      const apiKey = getScanApiKey();
+      if (!apiKey) { inputEl.value = ''; return; }
+
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const thumb = document.getElementById(`scan-thumb-${memberId}`);
+        thumb.src = e.target.result;
+        thumb.style.display = 'inline-block';
+        setScanStatus(memberId, '画像を最適化中...');
+
+        const img = new Image();
+        img.onload = () => {
+          const scale = Math.min(1, 1200 / img.naturalWidth);
+          const w = Math.max(1, Math.round(img.naturalWidth * scale));
+          const h = Math.max(1, Math.round(img.naturalHeight * scale));
+          const c = document.createElement('canvas');
+          c.width = w; c.height = h;
+          c.getContext('2d').drawImage(img, 0, 0, w, h);
+          const resizedDataUrl = c.toDataURL('image/jpeg', 0.85);
+          const base64 = resizedDataUrl.split(',')[1];
+          scanPersonalSlip(memberId, base64, 'image/jpeg', apiKey);
+        };
+        img.src = e.target.result;
+      };
+      reader.readAsDataURL(file);
+      inputEl.value = ''; // 同じファイルを連続選択できるようにリセット
+    }
+
+    async function scanPersonalSlip(memberId, base64, mime, apiKey) {
+      setScanStatus(memberId, '読み取り中...');
+      const model = getScanModel();
+      const prompt = `添付の画像は、ボウリング場で1人のプレイヤーに渡される個人結果票です。
+この人が投げた各ゲームの結果を、投球順に配列で読み取ってください。
+各ゲームは次の形式のオブジェクトにしてください:
+{"frames": 必ず10要素の配列。各要素は {"throws": [...], "score": 数値またはnull, "is_split": true/false} というオブジェクト。
+throwsは各投球の結果を表す文字列の配列。ストライクは"X"、スペアは"/"、ミス(倒れなかった)は"-"、それ以外は倒したピン数を表す数字の文字列。
+scoreはそのフレーム時点の累積スコア(シートの数字欄そのまま)。10フレーム目は投球数が2〜3投になることがある。
+is_splitは、そのフレームの1投目のピン数の数字が丸(サークル)で囲まれている場合にtrue、それ以外はfalseにしてください。丸がなければ必ずfalseにしてください。}
+日付が印字されていれば YYYY-MM-DD 形式(西暦下2桁のみの場合は20を補う)でトップレベルのdateに入れてください。読み取れなければnullにしてください。
+出力は次の形式のJSONオブジェクトのみとし、説明文やコードブロック記号は一切含めないでください:
+{"date": "YYYY-MM-DD"またはnull, "games": [ {"frames": [...10要素...]}, ... ]}`;
+
+      try {
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(apiKey)}`;
+        const res = await fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contents: [{ parts: [{ text: prompt }, { inline_data: { mime_type: mime, data: base64 } }] }],
+            generationConfig: { responseMimeType: 'application/json', temperature: 0, maxOutputTokens: 4000 }
+          })
+        });
+        if (!res.ok) {
+          const errText = await res.text().catch(() => '');
+          throw new Error(`APIエラー (${res.status}): ${errText.slice(0, 150)}`);
+        }
+        const data = await res.json();
+        const text = data && data.candidates && data.candidates[0] && data.candidates[0].content
+          && data.candidates[0].content.parts && data.candidates[0].content.parts[0]
+          ? data.candidates[0].content.parts[0].text : null;
+        if (!text) throw new Error('応答からテキストを取得できませんでした');
+
+        const cleaned = text.trim().replace(/^```json\s*/i, '').replace(/^```\s*/, '').replace(/```\s*$/, '');
+        const parsed = JSON.parse(cleaned);
+        const games = Array.isArray(parsed.games) ? parsed.games : [];
+        if (games.length === 0) throw new Error('ゲームを読み取れませんでした。手入力してください。');
+
+        applyScannedGames(memberId, games, parsed.date);
+        setScanStatus(memberId, `${games.length}ゲーム分を読み取りました。読み取り精度は完璧ではないため📋アイコンから必ず確認してください。`, 'ok');
+      } catch (err) {
+        setScanStatus(memberId, err.message || String(err), 'err');
+      }
+    }
+
+    function normalizeFrames(frames) {
+      const arr = Array.isArray(frames) ? frames.slice(0, 10) : [];
+      while (arr.length < 10) arr.push({ throws: [], score: null, is_split: false });
+      return arr.map(f => ({
+        throws: Array.isArray(f.throws) ? f.throws.map(String) : [],
+        score: (f == null || f.score === '' || f.score == null || isNaN(f.score)) ? null : Number(f.score),
+        is_split: !!(f && f.is_split)
+      }));
+    }
+
+    function computeTotalFromFrames(frames) {
+      for (let i = frames.length - 1; i >= 0; i--) {
+        if (frames[i].score != null) return frames[i].score;
+      }
+      return null;
+    }
+
+    function applyScannedGames(memberId, games, date) {
+      const capped = games.slice(0, 5);
+      if (games.length > 5) {
+        showToast(`${games.length}ゲーム検出されましたが、入力欄は最大5Gまでのため先頭5Gのみ反映しました`);
+      }
+
+      const gcSelect = document.getElementById(`gc-${memberId}`);
+      gcSelect.value = String(capped.length || 1);
+      updateGameSlots(memberId);
+
+      if (!scannedFrameData[memberId]) scannedFrameData[memberId] = {};
+
+      capped.forEach((g, idx) => {
+        const gameNumber = idx + 1;
+        const frames = normalizeFrames(g.frames);
+        const total = computeTotalFromFrames(frames);
+        scannedFrameData[memberId][gameNumber] = { frames, total };
+
+        const input = document.getElementById(`g${gameNumber}-${memberId}`);
+        if (input) input.value = total != null ? total : '';
+        updateFrameBadge(memberId, gameNumber);
+      });
+      calcTotal(memberId);
+
+      const dateInput = document.getElementById('score-date');
+      if (date && dateInput && !dateInput.value) {
+        dateInput.value = date;
+      }
+    }
+
+    /* ---------------------------------------------------------
+       フレーム詳細 確認・修正モーダル
+       --------------------------------------------------------- */
+    function openFrameEditModal(memberId, gameNumber) {
+      const fd = scannedFrameData[memberId] && scannedFrameData[memberId][gameNumber];
+      if (!fd) return;
+      document.getElementById('frame-edit-member-id').value = memberId;
+      document.getElementById('frame-edit-game-number').value = gameNumber;
+      renderFrameEditStrip(fd.frames);
+      document.getElementById('frame-edit-total').textContent = fd.total != null ? fd.total : '-';
+      showModal('modal-frame-edit');
+    }
+
+    function renderFrameEditStrip(frames) {
+      const strip = document.getElementById('frame-edit-strip');
+      strip.innerHTML = '';
+      frames.forEach((f, idx) => {
+        const cell = document.createElement('div');
+        cell.className = 'frame-edit-cell' + (idx === 9 ? ' frame10' : '');
+        const throwsArr = f.throws.length ? f.throws : ['', ''];
+        const throwsHtml = throwsArr.map(t => `<input type="text" class="fe-throw" maxlength="2" value="${escapeHtml(String(t))}">`).join('');
+        cell.innerHTML = `
+          <div class="fe-idx">${idx + 1}</div>
+          <div class="fe-throws">${throwsHtml}</div>
+          <div class="fe-score"><input type="text" class="fe-score-input" value="${f.score != null ? f.score : ''}"></div>
+          <label class="fe-split"><input type="checkbox" class="fe-split-check" ${f.is_split ? 'checked' : ''}>🔴</label>
+        `;
+        strip.appendChild(cell);
+      });
+      strip.querySelectorAll('input[type="text"]').forEach(inp => inp.addEventListener('input', recalcFrameEditTotal));
+    }
+
+    function recalcFrameEditTotal() {
+      const cells = document.querySelectorAll('#frame-edit-strip .frame-edit-cell');
+      let last = null;
+      cells.forEach(cell => {
+        const sc = cell.querySelector('.fe-score-input').value;
+        if (sc !== '') last = Number(sc);
+      });
+      document.getElementById('frame-edit-total').textContent = last != null ? last : '-';
+    }
+
+    function saveFrameEdit() {
+      const memberId = document.getElementById('frame-edit-member-id').value;
+      const gameNumber = Number(document.getElementById('frame-edit-game-number').value);
+      const cells = document.querySelectorAll('#frame-edit-strip .frame-edit-cell');
+      const frames = Array.from(cells).map(cell => ({
+        throws: Array.from(cell.querySelectorAll('.fe-throw')).map(i => i.value.trim()).filter(v => v !== ''),
+        score: (() => { const v = cell.querySelector('.fe-score-input').value; return v === '' ? null : Number(v); })(),
+        is_split: cell.querySelector('.fe-split-check').checked
+      }));
+      const total = computeTotalFromFrames(frames);
+      if (!scannedFrameData[memberId]) scannedFrameData[memberId] = {};
+      scannedFrameData[memberId][gameNumber] = { frames, total };
+
+      const input = document.getElementById(`g${gameNumber}-${memberId}`);
+      if (input) input.value = total != null ? total : '';
+      updateFrameBadge(memberId, gameNumber);
+      calcTotal(memberId);
+      closeModal('modal-frame-edit');
+    }
+
+    function clearFrameEditData() {
+      const memberId = document.getElementById('frame-edit-member-id').value;
+      const gameNumber = Number(document.getElementById('frame-edit-game-number').value);
+      if (scannedFrameData[memberId]) delete scannedFrameData[memberId][gameNumber];
+      updateFrameBadge(memberId, gameNumber);
+      closeModal('modal-frame-edit');
+    }
+
 
     function submitScores() {
       const date = document.getElementById('score-date').value;
@@ -1820,7 +2256,8 @@ const AVATAR_OPTIONS = [
           memberId: mId,
           gameCount: parseInt(document.getElementById(`gc-${mId}`).value) || 0,
           g1: g1, g2: g2, g3: g3, g4: g4, g5: g5,
-          totalScore: (g1||0) + (g2||0) + (g3||0) + (g4||0) + (g5||0)
+          totalScore: (g1||0) + (g2||0) + (g3||0) + (g4||0) + (g5||0),
+          frames: scannedFrameData[mId] || {}
         });
       });
 
@@ -1832,6 +2269,8 @@ const AVATAR_OPTIONS = [
         document.getElementById('loading').style.display = 'none';
         showToast(res.message);
         if (!res.success) return;
+
+        checkboxes.forEach(cb => { delete scannedFrameData[cb.value]; });
 
         fetchData(() => {
           showSaveSummary(totalGamesToday, poolBefore, appData.vault.totalPoolGames);
@@ -2245,6 +2684,112 @@ const AVATAR_OPTIONS = [
         : '<div style="color:#888; text-align:center; padding:8px;">この期間はランクインしている項目がありません</div>';
     }
 
+    function throwToPins(t) {
+      if (t === 'X' || t === 'x') return 10;
+      if (t === '/') return null;
+      if (t === '-' ) return 0;
+      const n = parseInt(t, 10);
+      return isNaN(n) ? null : n;
+    }
+
+    // filteredAtt(期間内の出席記録配列)から、frames詳細が付いているゲームだけを対象に
+    // 投球詳細統計(1球平均・ストライク率・マーク率・オープン率・スプリットカバー率・
+    // 10フレーム目平均・ダブル/ターキー発生数)を計算する
+    function computeAdvancedFrameStats(filteredAtt) {
+      let firstBallPinsSum = 0, firstBallCount = 0;
+      let strikeFrames = 0, spareFrames = 0, openFrames = 0, totalFrames = 0;
+      let splitTotal = 0, splitCovered = 0;
+      let frame10PointsSum = 0, frame10Count = 0, maxFrame10Points = null;
+      let doublesCount = 0, turkeysCount = 0, gamesWithFrames = 0;
+
+      filteredAtt.forEach(att => {
+        (att.games || []).forEach(g => {
+          const frames = g.frames || [];
+          const hasData = frames.some(f => f.score != null || (f.throws && f.throws.length));
+          if (!hasData) return;
+          gamesWithFrames++;
+
+          const strikeFlags = [];
+          frames.forEach((f, idx) => {
+            const t0 = f.throws && f.throws[0];
+            const t1 = f.throws && f.throws[1];
+            if (t0 === undefined || t0 === null || t0 === '') return;
+
+            const p0 = throwToPins(t0);
+            if (p0 != null) { firstBallPinsSum += p0; firstBallCount++; }
+
+            const isStrike = (t0 === 'X' || t0 === 'x');
+            const isSpare = !isStrike && t1 === '/';
+            strikeFlags.push(isStrike);
+
+            totalFrames++;
+            if (isStrike) strikeFrames++;
+            else if (isSpare) spareFrames++;
+            else if (t1 !== undefined && t1 !== null && t1 !== '') openFrames++;
+
+            if (f.is_split) {
+              splitTotal++;
+              if (isSpare) splitCovered++;
+            }
+
+            if (idx === 9) {
+              const prevScore = frames[8] && frames[8].score != null ? frames[8].score : null;
+              const finalScore = f.score != null ? f.score : g.score;
+              if (prevScore != null && finalScore != null) {
+                const f10pts = finalScore - prevScore;
+                frame10PointsSum += f10pts;
+                frame10Count++;
+                if (maxFrame10Points == null || f10pts > maxFrame10Points) maxFrame10Points = f10pts;
+              }
+            }
+          });
+
+          let run = 0;
+          strikeFlags.forEach(isStrike => {
+            if (isStrike) { run++; }
+            else { if (run === 2) doublesCount++; else if (run >= 3) turkeysCount++; run = 0; }
+          });
+          if (run === 2) doublesCount++; else if (run >= 3) turkeysCount++;
+        });
+      });
+
+      return {
+        firstBallAvg: firstBallCount > 0 ? firstBallPinsSum / firstBallCount : null,
+        strikeRate: totalFrames > 0 ? (strikeFrames / totalFrames) * 100 : null,
+        markRate: totalFrames > 0 ? ((strikeFrames + spareFrames) / totalFrames) * 100 : null,
+        openFrameRate: totalFrames > 0 ? (openFrames / totalFrames) * 100 : null,
+        splitCoverRate: splitTotal > 0 ? (splitCovered / splitTotal) * 100 : null,
+        splitTotal,
+        splitCovered,
+        frame10Avg: frame10Count > 0 ? frame10PointsSum / frame10Count : null,
+        maxFrame10Points: maxFrame10Points,
+        doublesPerGame: gamesWithFrames > 0 ? doublesCount / gamesWithFrames : null,
+        turkeysPerGame: gamesWithFrames > 0 ? turkeysCount / gamesWithFrames : null,
+        turkeysTotal: turkeysCount,
+        gamesWithFrames,
+        totalFrames
+      };
+    }
+
+    function renderMyPageFrameStats(filteredAtt) {
+      const s = computeAdvancedFrameStats(filteredAtt);
+      const noteEl = document.getElementById('mypage-frame-stats-note');
+      if (s.gamesWithFrames === 0) {
+        noteEl.textContent = '(フレーム詳細付きの記録がまだありません)';
+      } else {
+        noteEl.textContent = `(フレーム詳細のある${s.gamesWithFrames}ゲーム分で集計)`;
+      }
+      const fmt = (v, unit, digits) => v == null ? '-' : `${v.toFixed(digits)}${unit}`;
+      document.getElementById('mypage-fba').innerText = fmt(s.firstBallAvg, '本', 1);
+      document.getElementById('mypage-strike-rate').innerText = fmt(s.strikeRate, '%', 1);
+      document.getElementById('mypage-mark-rate').innerText = fmt(s.markRate, '%', 1);
+      document.getElementById('mypage-open-rate').innerText = fmt(s.openFrameRate, '%', 1);
+      document.getElementById('mypage-splitcover').innerText = s.splitTotal > 0 ? `${fmt(s.splitCoverRate, '%', 1)} (${s.splitTotal}回中)` : '- (スプリットなし)';
+      document.getElementById('mypage-f10avg').innerText = fmt(s.frame10Avg, '点', 1);
+      document.getElementById('mypage-doubles').innerText = fmt(s.doublesPerGame, '回', 2);
+      document.getElementById('mypage-turkeys').innerText = fmt(s.turkeysPerGame, '回', 2);
+    }
+
     function renderMyPageData() {
       if (!currentMyPageMemberId) return;
       const member = appData.members.find(m => m.id === currentMyPageMemberId);
@@ -2272,6 +2817,8 @@ const AVATAR_OPTIONS = [
       document.getElementById('mypage-avg-total').innerText = stats.totalAvg.toFixed(1);
       document.getElementById('mypage-avg-recent').innerText = stats.recent15Avg.toFixed(1);
       document.getElementById('mypage-high').innerText = `${stats.highScore} 点`;
+
+      renderMyPageFrameStats(filteredAtt);
 
       renderMyPageRankingSummary();
 
@@ -2394,7 +2941,13 @@ const AVATAR_OPTIONS = [
       gapMax: '最多ギャップランキング\n\n1日(最大5G)の中での「最高スコア」と「最低スコア」の差が最も大きかった日の記録のランキングです。波の大きさを競います。（2ゲームのみの日は対象外）',
       gapMin: '最小ギャップランキング\n\n1日(最大5G)の中での「最高スコア」と「最低スコア」の差が最も小さかった日の記録のランキングです（例: 150, 152, 151点など）。安定感を競います。（2ゲームのみの日は対象外）',
       mip: '急成長(MIP)ランキング\n\n通算アベレージと比較して、選択した期間のアベレージがどれだけ伸びたかのランキングです。通算(歴代)フィルタでは算出できないため表示されません。',
-      giant: 'ジャイアントキリングランキング\n\n自分の通算アベレージより+30点以上高いスコアを出した回数のランキングです。'
+      giant: 'ジャイアントキリングランキング\n\n自分の通算アベレージより+30点以上高いスコアを出した回数のランキングです。',
+      strikeRate: 'ストライク率ランキング\n\n選択した期間内で、写真読み取り(フレーム詳細)のある記録を対象に、全フレームに占めるストライクの割合が高い順のランキングです。フレーム詳細のない手入力の記録は対象外です。',
+      openFrame: 'オープンフレーム率ランキング\n\n選択した期間内で、フレーム詳細のある記録を対象に、ストライクにもスペアにもならなかった「オープンフレーム」の割合が低い順(堅実な順)のランキングです。',
+      splitCover: 'スプリットカバー率ランキング\n\nスプリット(丸で囲まれたピン数)が出た回数のうち、スペアで処理(カバー)できた割合が高い順のランキングです。スプリットが1回も記録されていない人は対象外です。',
+      doubleTurkey: 'ダブル・ターキー発生率ランキング\n\n1ゲームあたりの平均で、ストライクが2連続(ダブル)・3連続以上(ターキー)発生した回数を合計した値が高い順のランキングです。',
+      frame10: '10フレーム目 平均獲得点ランキング\n\n10フレーム目だけで獲得した点数(最大30点)の平均が高い順のランキングです。',
+      fba: '1球平均倒ピン数ランキング\n\n全フレームの1投目で倒したピンの本数の平均が高い順のランキングです。'
     };
 
     function showRankingInfo(key) {
@@ -2499,6 +3052,12 @@ const AVATAR_OPTIONS = [
         }
       });
 
+      // フレーム詳細ベースの統計(ストライク率・オープン率・スプリットカバー率・ダブル/ターキー・10フレーム目・1球平均)
+      appData.members.forEach(m => {
+        const memberAttInPeriod = appData.attendance.filter(a => a.memberId === m.id && isInPeriod(a.date));
+        if (statsMap[m.id]) statsMap[m.id].frameStats = computeAdvancedFrameStats(memberAttInPeriod);
+      });
+
       const list = Object.values(statsMap);
 
       // アベレージランキングは最低でも「月あたり6G以上」の投球数を要求する（期間に応じて按分）
@@ -2512,6 +3071,21 @@ const AVATAR_OPTIONS = [
       result.gapMax = [...list].filter(x => x.bestGap !== null).sort((a,b) => b.bestGap - a.bestGap);
       result.gapMin = [...list].filter(x => x.worstGap !== null).sort((a,b) => a.worstGap - b.worstGap);
       result.giant = [...list].filter(x => x.giantCount > 0).sort((a,b) => b.giantCount - a.giantCount);
+
+      result.strikeRate = [...list].filter(x => x.frameStats && x.frameStats.totalFrames > 0 && x.frameStats.strikeRate != null)
+        .sort((a,b) => b.frameStats.strikeRate - a.frameStats.strikeRate);
+      result.openFrame = [...list].filter(x => x.frameStats && x.frameStats.totalFrames > 0 && x.frameStats.openFrameRate != null)
+        .sort((a,b) => a.frameStats.openFrameRate - b.frameStats.openFrameRate);
+      result.splitCover = [...list].filter(x => x.frameStats && x.frameStats.splitTotal > 0)
+        .sort((a,b) => b.frameStats.splitCoverRate - a.frameStats.splitCoverRate);
+      result.doubleTurkey = [...list].filter(x => x.frameStats && x.frameStats.gamesWithFrames > 0)
+        .map(x => Object.assign({}, x, { combinedRate: (x.frameStats.doublesPerGame || 0) + (x.frameStats.turkeysPerGame || 0) }))
+        .filter(x => x.combinedRate > 0)
+        .sort((a,b) => b.combinedRate - a.combinedRate);
+      result.frame10 = [...list].filter(x => x.frameStats && x.frameStats.frame10Avg != null)
+        .sort((a,b) => b.frameStats.frame10Avg - a.frameStats.frame10Avg);
+      result.fba = [...list].filter(x => x.frameStats && x.frameStats.firstBallAvg != null)
+        .sort((a,b) => b.frameStats.firstBallAvg - a.frameStats.firstBallAvg);
 
       if (filter === 'all') {
         result.mip = [];
@@ -2552,6 +3126,25 @@ const AVATAR_OPTIONS = [
       renderRankingList('ranking-giant', r.giant.slice(0, 5),
         x => `${x.giantCount}回`,
         x => `アベレージ ${((appData.stats[x.id] && appData.stats[x.id].totalAvg) || 0).toFixed(1)}`);
+
+      renderRankingList('ranking-strike-rate', r.strikeRate.slice(0, 5),
+        x => `${x.frameStats.strikeRate.toFixed(1)}%`,
+        x => `フレーム詳細${x.frameStats.gamesWithFrames}G分`);
+      renderRankingList('ranking-open-frame', r.openFrame.slice(0, 5),
+        x => `${x.frameStats.openFrameRate.toFixed(1)}%`,
+        x => `フレーム詳細${x.frameStats.gamesWithFrames}G分`);
+      renderRankingList('ranking-split-cover', r.splitCover.slice(0, 5),
+        x => `${x.frameStats.splitCoverRate.toFixed(1)}%`,
+        x => `${x.frameStats.splitCovered}/${x.frameStats.splitTotal}回カバー`);
+      renderRankingList('ranking-double-turkey', r.doubleTurkey.slice(0, 5),
+        x => `${x.combinedRate.toFixed(2)}回/G`,
+        x => `ダブル${(x.frameStats.doublesPerGame||0).toFixed(2)} / ターキー${(x.frameStats.turkeysPerGame||0).toFixed(2)}`);
+      renderRankingList('ranking-frame10', r.frame10.slice(0, 5),
+        x => `${x.frameStats.frame10Avg.toFixed(1)}点`,
+        x => `フレーム詳細${x.frameStats.gamesWithFrames}G分`);
+      renderRankingList('ranking-fba', r.fba.slice(0, 5),
+        x => `${x.frameStats.firstBallAvg.toFixed(1)}本`,
+        x => `フレーム詳細${x.frameStats.gamesWithFrames}G分`);
 
       // MIPランキング（通算フィルタでは非表示）
       const mipSection = document.getElementById('ranking-section-mip');
@@ -2626,6 +3219,50 @@ const AVATAR_OPTIONS = [
       });
     }
 
+    function renderFrameViewStrip(frames) {
+      return frames.map((f, idx) => {
+        const throwsHtml = (f.throws && f.throws.length ? f.throws : ['-']).map(t => `<span>${escapeHtml(String(t))}</span>`).join('');
+        return `
+          <div class="frame-view-cell${idx === 9 ? ' frame10' : ''}${f.is_split ? ' split' : ''}">
+            <div class="fv-idx">${idx + 1}</div>
+            <div class="fv-throws">${throwsHtml}</div>
+            <div class="fv-score">${f.score != null ? f.score : '-'}</div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function showGameDetail(sessionId) {
+      const att = appData.attendance.find(a => a.id === sessionId);
+      if (!att) return;
+      document.getElementById('game-detail-title').textContent = `🎳 ${att.date} - ${att.memberName}`;
+
+      const content = document.getElementById('game-detail-content');
+      const games = att.games || [];
+      if (games.length === 0) {
+        content.innerHTML = '<p style="font-size:13px; color:#aaa;">記録がありません。</p>';
+      } else {
+        content.innerHTML = games.map(g => {
+          const hasFrames = g.frames && g.frames.length > 0 && g.frames.some(f => f.score != null || (f.throws && f.throws.length));
+          if (!hasFrames) {
+            return `
+              <div style="margin-bottom:14px;">
+                <div class="game-detail-label">${g.gameNumber}G: ${g.score != null ? g.score : '-'}点</div>
+                <p style="font-size:12px; color:#888; margin:0;">フレーム詳細なし(合計のみの記録です)</p>
+              </div>
+            `;
+          }
+          return `
+            <div style="margin-bottom:14px;">
+              <div class="game-detail-label">${g.gameNumber}G: ${g.score != null ? g.score : '-'}点</div>
+              <div class="frame-view-strip">${renderFrameViewStrip(g.frames)}</div>
+            </div>
+          `;
+        }).join('');
+      }
+      showModal('modal-game-detail');
+    }
+
     function renderHistory() {
       const container = document.getElementById('history-list-container');
       container.innerHTML = '';
@@ -2638,7 +3275,10 @@ const AVATAR_OPTIONS = [
                 投球: ${att.gameCount}G | スコア: [${[att.g1, att.g2, att.g3, att.g4, att.g5].slice(0, att.gameCount).map(g => g !== null && g !== undefined ? g : '-').join(', ')}] | 合計: ${att.totalScore}
               </div>
             </div>
-            <button class="btn btn-secondary btn-sm admin-only" onclick="showEditScoreModal('${att.id}', '${att.memberId}', '${att.date}', ${att.gameCount}, ${att.g1}, ${att.g2}, ${att.g3}, ${att.g4}, ${att.g5})">編集</button>
+            <div style="display:flex; gap:4px;">
+              <button class="btn btn-secondary btn-sm" onclick="showGameDetail('${att.id}')">詳細</button>
+              <button class="btn btn-secondary btn-sm admin-only" onclick="showEditScoreModal('${att.id}', '${att.memberId}', '${att.date}', ${att.gameCount}, ${att.g1}, ${att.g2}, ${att.g3}, ${att.g4}, ${att.g5})">編集</button>
+            </div>
           </div>
         `;
       });
@@ -2701,6 +3341,53 @@ const AVATAR_OPTIONS = [
       });
       if (hasZorome) unlocked.push('zorome');
       if (hasSplit100) unlocked.push('split');
+
+      // フレーム詳細ベースの実績(通算、フレーム詳細15G以上が前提のものは frameStats.gamesWithFrames で判定)
+      const fs = stats.frameStats;
+      if (fs) {
+        if (fs.gamesWithFrames >= 15) {
+          if (fs.strikeRate != null) {
+            if (fs.strikeRate >= 50) unlocked.push('strikerate50');
+            if (fs.strikeRate >= 60) unlocked.push('strikerate60');
+            if (fs.strikeRate >= 70) unlocked.push('strikerate70');
+            if (fs.strikeRate >= 80) unlocked.push('strikerate80');
+          }
+          if (fs.openFrameRate != null) {
+            if (fs.openFrameRate < 30) unlocked.push('lowopen30');
+            if (fs.openFrameRate < 20) unlocked.push('lowopen20');
+            if (fs.openFrameRate < 10) unlocked.push('lowopen10');
+            if (fs.openFrameRate < 5) unlocked.push('lowopen5');
+          }
+          if (fs.firstBallAvg != null) {
+            if (fs.firstBallAvg >= 7) unlocked.push('fba7');
+            if (fs.firstBallAvg >= 8) unlocked.push('fba8');
+            if (fs.firstBallAvg >= 9) unlocked.push('fba9');
+          }
+        }
+
+        if (fs.splitCovered >= 1) unlocked.push('splitcover1');
+        if (fs.splitCovered >= 10) unlocked.push('splitcover10');
+        if (fs.splitCovered >= 30) unlocked.push('splitcover30');
+        if (fs.splitCovered >= 50) unlocked.push('splitcover50');
+
+        if (fs.turkeysTotal >= 1) unlocked.push('turkey1');
+        if (fs.turkeysTotal >= 5) unlocked.push('turkey5');
+        if (fs.turkeysTotal >= 20) unlocked.push('turkey20');
+        if (fs.turkeysTotal >= 50) unlocked.push('turkey50');
+
+        if (fs.maxFrame10Points != null) {
+          if (fs.maxFrame10Points >= 20) unlocked.push('f10_20');
+          if (fs.maxFrame10Points >= 25) unlocked.push('f10_25');
+          if (fs.maxFrame10Points >= 30) unlocked.push('f10_30');
+        }
+      }
+
+      // メタ実績:ここまでに解放した実績の数に応じて付与(無限ループ防止のため、他の実績の集計後に判定)
+      const nonMetaCount = unlocked.length;
+      if (nonMetaCount >= 10) unlocked.push('meta10');
+      if (nonMetaCount >= 25) unlocked.push('meta25');
+      if (nonMetaCount >= 40) unlocked.push('meta40');
+      if (nonMetaCount >= 50) unlocked.push('meta50');
 
       return unlocked;
     }
