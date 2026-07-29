@@ -2724,11 +2724,7 @@ is_splitは、そのフレームの1投目のピン数の数字が丸(サーク�
     function renderThrowMark(raw) {
       const t = (raw == null ? '' : String(raw)).trim().toUpperCase();
       if (t === '') return '<span class="mark-blank"></span>';
-      if (t === 'X') return '<svg class="mark-icon" viewBox="0 0 100 100" preserveAspectRatio="none" title="ストライク"><polygon points="0,0 50,50 0,100 100,100 50,50 100,0"/></svg>';
-      if (t === '/') return '<svg class="mark-icon" viewBox="0 0 100 100" preserveAspectRatio="none" title="スペア"><polygon points="0,0 100,100 0,100"/></svg>';
-      if (t === '-') return '<span class="mark-miss" title="ミス">－</span>';
-      if (t === 'G') return '<span class="mark-box" title="ガター">G</span>';
-      if (t === 'F') return '<span class="mark-box" title="ファール">F</span>';
+      if (t === '-') return `<span class="mark-miss" title="ミス">－</span>`;
       return `<span class="mark-num">${escapeHtml(t)}</span>`;
     }
 
