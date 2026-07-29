@@ -246,15 +246,17 @@
     .scoreboard-frame.split { border-color: #f87171; }
     .scoreboard-frame .sb-idx { font-size: 8px; color: #888; text-align: center; padding: 1px 0; border-bottom: 1px solid #333; }
     .scoreboard-frame .sb-throws { display: flex; min-height: 16px; }
-    .scoreboard-frame .sb-throws > span, .scoreboard-frame .sb-throws > input, .scoreboard-frame .sb-throws > svg.mark-icon { flex: 1 1 0; min-width: 0; text-align: center; font-size: 10px; color: #facc15; font-family: monospace; border-right: 1px solid #333; padding: 2px 0; background: transparent; border-top: none; border-bottom: none; border-left: none; box-sizing: border-box; }
+    .scoreboard-frame .sb-throws > span, .scoreboard-frame .sb-throws > input { flex: 1 1 0; min-width: 0; text-align: center; font-size: 10px; color: #facc15; font-family: monospace; border-right: 1px solid #333; padding: 2px 0; background: transparent; border-top: none; border-bottom: none; border-left: none; box-sizing: border-box; }
+    .scoreboard-frame .sb-throws > svg.mark-icon { flex: 1 1 0; min-width: 0; border-right: 1px solid #333; box-sizing: border-box; }
     .scoreboard-frame .sb-throws > span:last-child, .scoreboard-frame .sb-throws > input:last-child, .scoreboard-frame .sb-throws > svg.mark-icon:last-child { border-right: none; }
     .scoreboard-frame .sb-score { text-align: center; font-size: 11px; color: #e0e0e0; border-top: 1px solid #333; padding: 2px 0; font-family: monospace; }
     .scoreboard-frame .sb-score input { width: 100%; background: transparent; border: none; color: #e0e0e0; font-family: monospace; font-size: 11px; text-align: center; padding: 0; }
     .scoreboard-frame .sb-split-toggle { display: flex; justify-content: center; align-items: center; padding: 1px 0; border-top: 1px solid #333; }
     .scoreboard-frame .sb-split-toggle input { margin: 0; width: 11px; height: 11px; }
     .scoreboard-frame.readonly { cursor: pointer; }
-    svg.mark-icon { display: block; width: 100%; height: 14px; padding: 0; }
-    svg.mark-icon polygon { fill: #e0e0e0; }
+    svg.mark-icon { display: block; width: 100%; height: 100%; }
+    svg.mark-icon polygon { fill: #facc15; }
+    .mark-blank { display: block; }
     .mark-miss { color: #888; font-weight: bold; }
     .mark-box { display: inline-block; border: 1px solid #e0e0e0; border-radius: 2px; font-size: 9px; padding: 0 2px; color: #e0e0e0; line-height: 1.3; }
     .mark-num { color: #facc15; }
@@ -268,7 +270,6 @@
     .score-table-strip .sb-throws { min-height: 12px; }
     .score-table-strip .sb-throws > span { font-size: 9px; padding: 1px 0; }
     .score-table-strip .sb-score { font-size: 9px; padding: 1px 0; }
-    .score-table-strip svg.mark-icon { height: 10px; }
     .score-table-strip .mark-box { font-size: 7px; padding: 0 1px; }
     .game-detail-label { font-size: 13px; font-weight: bold; color: #38bdf8; margin-bottom: 4px; }
 
@@ -1985,7 +1986,7 @@ const AVATAR_OPTIONS = [
         const frames = fd ? fd.frames : blankFrames();
         const total = fd ? fd.total : null;
         const cellsHtml = frames.map((f, idx) => {
-          const throwsHtml = (f.throws && f.throws.length) ? f.throws.map(t => renderThrowMark(t)).join('') : '<span class="mark-miss">-</span>';
+          const throwsHtml = padThrowsForDisplay(f.throws, idx).map(t => renderThrowMark(t)).join('');
           return `
             <div class="scoreboard-frame readonly${f.is_split ? ' split' : ''}">
               <div class="sb-idx">${idx + 1}</div>
@@ -2197,7 +2198,7 @@ is_splitは、そのフレームの1投目のピン数の数字が丸(サーク�
       frames.forEach((f, idx) => {
         const cell = document.createElement('div');
         cell.className = 'scoreboard-frame' + (f.is_split ? ' split' : '');
-        const throwsArr = f.throws.length ? f.throws : ['', ''];
+        const throwsArr = padThrowsForDisplay(f.throws, idx);
         const throwsHtml = throwsArr.map(t => `<input type="text" class="sb-throw" maxlength="2" value="${escapeHtml(String(t))}">`).join('');
         cell.innerHTML = `
           <div class="sb-idx">${idx + 1}</div>
@@ -2711,11 +2712,21 @@ is_splitは、そのフレームの1投目のピン数の数字が丸(サーク�
     }
 
     // スコア記号一覧(ストライク/スペア/ミス/ガター/ファール)の見た目を再現する
+    // フレームの投球スロット数(通常2、10フレーム目のみ最大3)。足りない分は空白で埋める
+    function frameSlotCount(idx) { return idx === 9 ? 3 : 2; }
+    function padThrowsForDisplay(throwsArr, idx) {
+      const n = frameSlotCount(idx);
+      const arr = (throwsArr || []).slice(0, n);
+      while (arr.length < n) arr.push('');
+      return arr;
+    }
+
     function renderThrowMark(raw) {
       const t = (raw == null ? '' : String(raw)).trim().toUpperCase();
+      if (t === '') return '<span class="mark-blank"></span>';
       if (t === 'X') return '<svg class="mark-icon" viewBox="0 0 100 100" preserveAspectRatio="none" title="ストライク"><polygon points="0,0 50,50 0,100 100,100 50,50 100,0"/></svg>';
       if (t === '/') return '<svg class="mark-icon" viewBox="0 0 100 100" preserveAspectRatio="none" title="スペア"><polygon points="0,0 100,100 0,100"/></svg>';
-      if (t === '-' || t === '') return '<span class="mark-miss" title="ミス">－</span>';
+      if (t === '-') return '<span class="mark-miss" title="ミス">－</span>';
       if (t === 'G') return '<span class="mark-box" title="ガター">G</span>';
       if (t === 'F') return '<span class="mark-box" title="ファール">F</span>';
       return `<span class="mark-num">${escapeHtml(t)}</span>`;
@@ -3276,7 +3287,7 @@ is_splitは、そのフレームの1投目のピン数の数字が丸(サーク�
 
     function renderFrameViewStrip(frames) {
       return frames.map((f, idx) => {
-        const throwsHtml = (f.throws && f.throws.length ? f.throws : ['-']).map(t => renderThrowMark(t)).join('');
+        const throwsHtml = padThrowsForDisplay(f.throws, idx).map(t => renderThrowMark(t)).join('');
         return `
           <div class="scoreboard-frame${f.is_split ? ' split' : ''}">
             <div class="sb-idx">${idx + 1}</div>
