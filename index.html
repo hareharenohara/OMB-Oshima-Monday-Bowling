@@ -252,6 +252,31 @@
     .scoreboard-frame .sb-score input { width: 100%; background: transparent; border: none; color: #e0e0e0; font-family: monospace; font-size: 11px; text-align: center; padding: 0; }
     .scoreboard-frame .sb-split-toggle { display: flex; justify-content: center; align-items: center; padding: 1px 0; border-top: 1px solid #333; }
     .scoreboard-frame .sb-split-toggle input { margin: 0; width: 11px; height: 11px; }
+    .scoreboard-frame.readonly { cursor: pointer; }
+    .mark-strike, .mark-spare { display: inline-block; width: 13px; height: 13px; position: relative; vertical-align: middle; }
+    .mark-strike::before, .mark-strike::after { content: ''; position: absolute; top: 0; width: 0; height: 0; border-top: 6.5px solid transparent; border-bottom: 6.5px solid transparent; }
+    .mark-strike::before { left: 0; border-left: 6.5px solid #e0e0e0; }
+    .mark-strike::after { right: 0; border-right: 6.5px solid #e0e0e0; }
+    .mark-spare::before { content: ''; position: absolute; left: 1px; top: 0; width: 0; height: 0; border-top: 6.5px solid transparent; border-bottom: 6.5px solid transparent; border-left: 8px solid #e0e0e0; }
+    .mark-miss { color: #888; font-weight: bold; }
+    .mark-box { display: inline-block; border: 1px solid #e0e0e0; border-radius: 2px; font-size: 9px; padding: 0 2px; color: #e0e0e0; line-height: 1.3; }
+    .mark-num { color: #facc15; }
+
+    .score-table-row { display: flex; align-items: center; gap: 6px; margin-bottom: 6px; }
+    .score-table-glabel { flex: 0 0 22px; font-size: 11px; color: #888; font-weight: bold; }
+    .score-table-strip { flex: 1 1 auto; min-width: 0; }
+    .score-table-total { flex: 0 0 40px; text-align: right; font-size: 13px; font-weight: bold; color: #38bdf8; }
+    .score-table-empty-hint { font-size: 11px; color: #666; text-align: center; padding: 6px; border: 1px dashed #333; border-radius: 6px; }
+    .score-table-strip .sb-idx { font-size: 7px; padding: 0; }
+    .score-table-strip .sb-throws { min-height: 13px; }
+    .score-table-strip .sb-throws > span { font-size: 9px; padding: 1px 0; }
+    .score-table-strip .sb-score { font-size: 9px; padding: 1px 0; }
+    .score-table-strip .mark-strike, .score-table-strip .mark-spare { width: 10px; height: 11px; }
+    .score-table-strip .mark-strike::before, .score-table-strip .mark-strike::after { border-top-width: 5.5px; border-bottom-width: 5.5px; }
+    .score-table-strip .mark-strike::before { border-left-width: 5.5px; }
+    .score-table-strip .mark-strike::after { border-right-width: 5.5px; }
+    .score-table-strip .mark-spare::before { border-top-width: 5.5px; border-bottom-width: 5.5px; border-left-width: 6.5px; }
+    .score-table-strip .mark-box { font-size: 7px; padding: 0 1px; }
     .game-detail-label { font-size: 13px; font-weight: bold; color: #38bdf8; margin-bottom: 4px; }
 
     /* テーブル・アコーディオン */
@@ -276,7 +301,7 @@
     .modal-content { background: #1e1e1e; border: 1px solid #333; padding: 18px; border-radius: 12px; width: 100%; max-width: 450px; max-height: 85vh; overflow-y: auto; color: #e0e0e0; }
 
     /* アチーブメント格子 */
-    .achievement-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-top: 10px; }
+    .achievement-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 10px; }
     .achievement-item { text-align: center; padding: 8px 4px; background: #252525; border-radius: 8px; border: 1px solid #333; cursor: pointer; }
     .achievement-item.locked { opacity: 0.25; filter: grayscale(100%); }
     .achievement-item.equipped { border: 2px solid #38bdf8; background: rgba(56, 189, 248, 0.1); }
@@ -480,7 +505,7 @@
 
     /* スマホ最適化: 狭幅端末でのグリッド調整 */
     @media (max-width: 360px) {
-      .achievement-grid { grid-template-columns: repeat(3, 1fr); }
+      .achievement-grid { grid-template-columns: repeat(2, 1fr); }
       .avatar-picker-grid { grid-template-columns: repeat(5, 1fr); }
       .balance-grid, .summary-stat-grid { grid-template-columns: repeat(3, 1fr); gap: 6px; }
     }
@@ -777,7 +802,7 @@
   <div id="modal-frame-edit" class="modal" style="z-index:1700;">
     <div class="modal-content" style="max-width: 480px;">
       <h3 style="margin-top:0;">🎳 フレーム詳細の確認・修正</h3>
-      <p style="font-size:12px; color:#aaa; margin-top:-6px;">写真からの読み取り結果です。誤りがあれば修正してから反映してください。</p>
+      <p style="font-size:12px; color:#aaa; margin-top:-6px;">枠に投球結果を入力してください。ストライク=X / スペア=/ / ミス=- / ガター=G / ファール=F / それ以外は倒したピン数の数字。下段はその時点の累積スコアです。</p>
       <input type="hidden" id="frame-edit-member-id">
       <input type="hidden" id="frame-edit-game-number">
       <div class="table-scroll">
@@ -787,7 +812,7 @@
         合計: <strong id="frame-edit-total" style="color:#38bdf8; font-size:18px;">0</strong> 点
       </div>
       <div style="display:flex; justify-content:space-between; align-items:center; margin-top: 15px;">
-        <button class="btn btn-danger btn-sm" onclick="clearFrameEditData()">詳細を削除(合計のみにする)</button>
+        <button class="btn btn-danger btn-sm" onclick="clearFrameEditData()">この試合をクリア</button>
         <div style="display:flex; gap: 8px;">
           <button class="btn btn-secondary" onclick="closeModal('modal-frame-edit')">キャンセル</button>
           <button class="btn btn-success" onclick="saveFrameEdit()">この内容で反映</button>
@@ -1881,11 +1906,6 @@ const AVATAR_OPTIONS = [
             </div>
           </div>
           <div class="score-card-body" id="input-area-${member.id}">
-            <div class="stats-summary">
-              <span>AVE: <strong style="color:#facc15">${stats.recent15Avg.toFixed(1)}</strong> <span style="color:${arrowColor}; font-weight:bold;">${arrow}</span> (${stats.totalAvg.toFixed(1)})</span>
-              <span>最高: <strong>${stats.highScore}</strong></span>
-              <span>総投球: <strong>${stats.totalGameCount}G</strong></span>
-            </div>
             <div class="scan-row">
               <img class="scan-preview-thumb" id="scan-thumb-${member.id}" alt="">
               <button type="button" class="btn btn-sm btn-scan-photo" onclick="triggerScorePhoto('${member.id}')">📷 結果票を読み取る</button>
@@ -1904,17 +1924,12 @@ const AVATAR_OPTIONS = [
               </span>
               <button class="btn btn-success btn-sm admin-only" onclick="showChargeModal('', '${member.id}', '${member.name}')">🎟️ 回数券追加</button>
             </div>
-            <div class="input-grid">
-              <div class="input-box-wrap"><label>1G</label><input type="number" id="g1-${member.id}" class="input-box" placeholder="0" oninput="onGameInputChanged('${member.id}', 1)"><span class="frame-badge" id="frame-badge-1-${member.id}" onclick="openFrameEditModal('${member.id}', 1)" title="フレーム詳細を確認">📋</span></div>
-              <div class="input-box-wrap"><label>2G</label><input type="number" id="g2-${member.id}" class="input-box" placeholder="0" oninput="onGameInputChanged('${member.id}', 2)"><span class="frame-badge" id="frame-badge-2-${member.id}" onclick="openFrameEditModal('${member.id}', 2)" title="フレーム詳細を確認">📋</span></div>
-              <div class="input-box-wrap"><label>3G</label><input type="number" id="g3-${member.id}" class="input-box" placeholder="0" oninput="onGameInputChanged('${member.id}', 3)"><span class="frame-badge" id="frame-badge-3-${member.id}" onclick="openFrameEditModal('${member.id}', 3)" title="フレーム詳細を確認">📋</span></div>
-              <div class="input-box-wrap hidden-slot" id="g4-wrap-${member.id}"><label>4G</label><input type="number" id="g4-${member.id}" class="input-box" placeholder="0" oninput="onGameInputChanged('${member.id}', 4)"><span class="frame-badge" id="frame-badge-4-${member.id}" onclick="openFrameEditModal('${member.id}', 4)" title="フレーム詳細を確認">📋</span></div>
-              <div class="input-box-wrap hidden-slot" id="g5-wrap-${member.id}"><label>5G</label><input type="number" id="g5-${member.id}" class="input-box" placeholder="0" oninput="onGameInputChanged('${member.id}', 5)"><span class="frame-badge" id="frame-badge-5-${member.id}" onclick="openFrameEditModal('${member.id}', 5)" title="フレーム詳細を確認">📋</span></div>
-            </div>
+            <div class="score-table" id="score-table-${member.id}"></div>
             <div id="calc-result-${member.id}" style="text-align:right; font-size:12px; font-weight:bold; margin-top:6px; color:#38bdf8;"></div>
           </div>
         `;
         container.appendChild(card);
+        renderScoreTable(member.id);
       });
 
       const alertArea = document.getElementById('alert-area');
@@ -1956,40 +1971,59 @@ const AVATAR_OPTIONS = [
     // 投球G数の選択に応じて4G/5G目の入力欄の表示・非表示を切り替える
     function updateGameSlots(memberId) {
       const gc = parseInt(document.getElementById(`gc-${memberId}`).value) || 3;
-      const grid = document.getElementById(`gc-${memberId}`).closest('.score-card-body').querySelector('.input-grid');
-      grid.classList.remove('games-4', 'games-5');
-      if (gc === 4) grid.classList.add('games-4');
-      if (gc === 5) grid.classList.add('games-5');
+      // 表示するゲーム数より多い分のフレームデータは削除しておく
+      if (scannedFrameData[memberId]) {
+        Object.keys(scannedFrameData[memberId]).forEach(gn => {
+          if (Number(gn) > gc) delete scannedFrameData[memberId][gn];
+        });
+      }
+      renderScoreTable(memberId);
+    }
 
-      const g4Wrap = document.getElementById(`g4-wrap-${memberId}`);
-      const g5Wrap = document.getElementById(`g5-wrap-${memberId}`);
-      g4Wrap.classList.toggle('hidden-slot', gc < 4);
-      g5Wrap.classList.toggle('hidden-slot', gc < 5);
-      if (gc < 4) { document.getElementById(`g4-${memberId}`).value = ''; if (scannedFrameData[memberId]) delete scannedFrameData[memberId][4]; updateFrameBadge(memberId, 4); }
-      if (gc < 5) { document.getElementById(`g5-${memberId}`).value = ''; if (scannedFrameData[memberId]) delete scannedFrameData[memberId][5]; updateFrameBadge(memberId, 5); }
+    // memberIdのスコア表(ゲームごとの10フレーム分)を描画する
+    function renderScoreTable(memberId) {
+      const container = document.getElementById(`score-table-${memberId}`);
+      if (!container) return;
+      const gc = parseInt(document.getElementById(`gc-${memberId}`).value) || 3;
+
+      let html = '';
+      for (let gameNumber = 1; gameNumber <= gc; gameNumber++) {
+        const fd = (scannedFrameData[memberId] && scannedFrameData[memberId][gameNumber]) || null;
+        const frames = fd ? fd.frames : blankFrames();
+        const total = fd ? fd.total : null;
+        const cellsHtml = frames.map((f, idx) => {
+          const throwsHtml = (f.throws && f.throws.length) ? f.throws.map(t => renderThrowMark(t)).join('') : '<span class="mark-miss">-</span>';
+          return `
+            <div class="scoreboard-frame readonly${f.is_split ? ' split' : ''}">
+              <div class="sb-idx">${idx + 1}</div>
+              <div class="sb-throws">${throwsHtml}</div>
+              <div class="sb-score">${f.score != null ? f.score : ''}</div>
+            </div>
+          `;
+        }).join('');
+
+        html += `
+          <div class="score-table-row" onclick="openFrameEditModal('${memberId}', ${gameNumber})">
+            <div class="score-table-glabel">${gameNumber}G</div>
+            <div class="scoreboard-strip score-table-strip">${cellsHtml}</div>
+            <div class="score-table-total">${total != null ? total : '-'}</div>
+          </div>
+        `;
+      }
+      html += `<div class="score-table-empty-hint">枠をタップして記入・修正</div>`;
+      container.innerHTML = html;
+
       calcTotal(memberId);
     }
 
     function calcTotal(memberId) {
-      const g1 = parseInt(document.getElementById(`g1-${memberId}`).value) || 0;
-      const g2 = parseInt(document.getElementById(`g2-${memberId}`).value) || 0;
-      const g3 = parseInt(document.getElementById(`g3-${memberId}`).value) || 0;
-      const g4 = parseInt(document.getElementById(`g4-${memberId}`).value) || 0;
-      const g5 = parseInt(document.getElementById(`g5-${memberId}`).value) || 0;
-      const sum = g1 + g2 + g3 + g4 + g5;
-      document.getElementById(`calc-result-${memberId}`).innerText = `合計: ${sum} 点`;
-    }
-
-    // 手入力で数値が変更されたら、その回はもうスキャン結果と一致しないのでフレーム詳細を破棄する
-    function onGameInputChanged(memberId, gameNumber) {
-      const input = document.getElementById(`g${gameNumber}-${memberId}`);
-      const current = input.value === '' ? null : Number(input.value);
-      const fd = scannedFrameData[memberId] && scannedFrameData[memberId][gameNumber];
-      if (fd && fd.total !== current) {
-        delete scannedFrameData[memberId][gameNumber];
-        updateFrameBadge(memberId, gameNumber);
+      const gc = parseInt(document.getElementById(`gc-${memberId}`).value) || 3;
+      let sum = 0;
+      for (let gameNumber = 1; gameNumber <= gc; gameNumber++) {
+        const fd = scannedFrameData[memberId] && scannedFrameData[memberId][gameNumber];
+        if (fd && fd.total != null) sum += fd.total;
       }
-      calcTotal(memberId);
+      document.getElementById(`calc-result-${memberId}`).innerText = `合計: ${sum} 点`;
     }
 
     /* ---------------------------------------------------------
@@ -2023,13 +2057,6 @@ const AVATAR_OPTIONS = [
       const el = document.getElementById(`scan-status-${memberId}`);
       el.textContent = text;
       el.className = 'scan-status-text' + (cls ? ' ' + cls : '');
-    }
-
-    function updateFrameBadge(memberId, gameNumber) {
-      const badge = document.getElementById(`frame-badge-${gameNumber}-${memberId}`);
-      if (!badge) return;
-      const has = !!(scannedFrameData[memberId] && scannedFrameData[memberId][gameNumber]);
-      badge.style.display = has ? 'inline' : 'none';
     }
 
     function handleScorePhotoSelected(memberId, inputEl) {
@@ -2070,7 +2097,7 @@ const AVATAR_OPTIONS = [
 この人が投げた各ゲームの結果を、投球順に配列で読み取ってください。
 各ゲームは次の形式のオブジェクトにしてください:
 {"frames": 必ず10要素の配列。各要素は {"throws": [...], "score": 数値またはnull, "is_split": true/false} というオブジェクト。
-throwsは各投球の結果を表す文字列の配列。ストライクは"X"、スペアは"/"、ミス(倒れなかった)は"-"、それ以外は倒したピン数を表す数字の文字列。
+throwsは各投球の結果を表す文字列の配列。ストライクは"X"、スペアは"/"、ピンを1本も倒せなかったミスは"-"、ガター(両端の溝に落ちた)は"G"、ファール(投球時にファールラインを越えた)は"F"、それ以外は倒したピン数を表す数字の文字列。
 scoreはそのフレーム時点の累積スコア(シートの数字欄そのまま)。10フレーム目は投球数が2〜3投になることがある。
 is_splitは、そのフレームの1投目のピン数の数字が丸(サークル)で囲まれている場合にtrue、それ以外はfalseにしてください。丸がなければ必ずfalseにしてください。}
 日付が印字されていれば YYYY-MM-DD 形式(西暦下2桁のみの場合は20を補う)でトップレベルのdateに入れてください。読み取れなければnullにしてください。
@@ -2142,7 +2169,6 @@ is_splitは、そのフレームの1投目のピン数の数字が丸(サーク�
 
       const gcSelect = document.getElementById(`gc-${memberId}`);
       gcSelect.value = String(capped.length || 1);
-      updateGameSlots(memberId);
 
       if (!scannedFrameData[memberId]) scannedFrameData[memberId] = {};
 
@@ -2151,12 +2177,8 @@ is_splitは、そのフレームの1投目のピン数の数字が丸(サーク�
         const frames = normalizeFrames(g.frames);
         const total = computeTotalFromFrames(frames);
         scannedFrameData[memberId][gameNumber] = { frames, total };
-
-        const input = document.getElementById(`g${gameNumber}-${memberId}`);
-        if (input) input.value = total != null ? total : '';
-        updateFrameBadge(memberId, gameNumber);
       });
-      calcTotal(memberId);
+      renderScoreTable(memberId);
 
       const dateInput = document.getElementById('score-date');
       if (date && dateInput && !dateInput.value) {
@@ -2168,8 +2190,7 @@ is_splitは、そのフレームの1投目のピン数の数字が丸(サーク�
        フレーム詳細 確認・修正モーダル
        --------------------------------------------------------- */
     function openFrameEditModal(memberId, gameNumber) {
-      const fd = scannedFrameData[memberId] && scannedFrameData[memberId][gameNumber];
-      if (!fd) return;
+      const fd = ensureGameFrameData(memberId, gameNumber);
       document.getElementById('frame-edit-member-id').value = memberId;
       document.getElementById('frame-edit-game-number').value = gameNumber;
       renderFrameEditStrip(fd.frames);
@@ -2222,18 +2243,15 @@ is_splitは、そのフレームの1投目のピン数の数字が丸(サーク�
       if (!scannedFrameData[memberId]) scannedFrameData[memberId] = {};
       scannedFrameData[memberId][gameNumber] = { frames, total };
 
-      const input = document.getElementById(`g${gameNumber}-${memberId}`);
-      if (input) input.value = total != null ? total : '';
-      updateFrameBadge(memberId, gameNumber);
-      calcTotal(memberId);
+      renderScoreTable(memberId);
       closeModal('modal-frame-edit');
     }
 
     function clearFrameEditData() {
       const memberId = document.getElementById('frame-edit-member-id').value;
       const gameNumber = Number(document.getElementById('frame-edit-game-number').value);
-      if (scannedFrameData[memberId]) delete scannedFrameData[memberId][gameNumber];
-      updateFrameBadge(memberId, gameNumber);
+      if (scannedFrameData[memberId]) scannedFrameData[memberId][gameNumber] = { frames: blankFrames(), total: null };
+      renderScoreTable(memberId);
       closeModal('modal-frame-edit');
     }
 
@@ -2251,15 +2269,17 @@ is_splitは、そのフレームの1投目のピン数の数字が丸(サーク�
       const records = [];
       checkboxes.forEach(cb => {
         const mId = cb.value;
-        const g1 = parseInt(document.getElementById(`g1-${mId}`).value) || null;
-        const g2 = parseInt(document.getElementById(`g2-${mId}`).value) || null;
-        const g3 = parseInt(document.getElementById(`g3-${mId}`).value) || null;
-        const g4 = parseInt(document.getElementById(`g4-${mId}`).value) || null;
-        const g5 = parseInt(document.getElementById(`g5-${mId}`).value) || null;
+        const gc = parseInt(document.getElementById(`gc-${mId}`).value) || 0;
+        const totals = [1, 2, 3, 4, 5].map(gameNumber => {
+          if (gameNumber > gc) return null;
+          const fd = scannedFrameData[mId] && scannedFrameData[mId][gameNumber];
+          return (fd && fd.total != null) ? fd.total : null;
+        });
+        const [g1, g2, g3, g4, g5] = totals;
         records.push({
           date: date,
           memberId: mId,
-          gameCount: parseInt(document.getElementById(`gc-${mId}`).value) || 0,
+          gameCount: gc,
           g1: g1, g2: g2, g3: g3, g4: g4, g5: g5,
           totalScore: (g1||0) + (g2||0) + (g3||0) + (g4||0) + (g5||0),
           frames: scannedFrameData[mId] || {}
@@ -2692,9 +2712,33 @@ is_splitは、そのフレームの1投目のピン数の数字が丸(サーク�
     function throwToPins(t) {
       if (t === 'X' || t === 'x') return 10;
       if (t === '/') return null;
-      if (t === '-' ) return 0;
+      if (t === '-' || t === 'G' || t === 'g' || t === 'F' || t === 'f') return 0;
       const n = parseInt(t, 10);
       return isNaN(n) ? null : n;
+    }
+
+    // スコア記号一覧(ストライク/スペア/ミス/ガター/ファール)の見た目を再現する
+    function renderThrowMark(raw) {
+      const t = (raw == null ? '' : String(raw)).trim().toUpperCase();
+      if (t === 'X') return '<span class="mark-strike" title="ストライク"></span>';
+      if (t === '/') return '<span class="mark-spare" title="スペア"></span>';
+      if (t === '-' || t === '') return '<span class="mark-miss" title="ミス">－</span>';
+      if (t === 'G') return '<span class="mark-box" title="ガター">G</span>';
+      if (t === 'F') return '<span class="mark-box" title="ファール">F</span>';
+      return `<span class="mark-num">${escapeHtml(t)}</span>`;
+    }
+
+    function blankFrames() {
+      return Array.from({ length: 10 }, () => ({ throws: [], score: null, is_split: false }));
+    }
+
+    // memberId・gameNumberのフレームデータが無ければ空のフレームで初期化して返す
+    function ensureGameFrameData(memberId, gameNumber) {
+      if (!scannedFrameData[memberId]) scannedFrameData[memberId] = {};
+      if (!scannedFrameData[memberId][gameNumber]) {
+        scannedFrameData[memberId][gameNumber] = { frames: blankFrames(), total: null };
+      }
+      return scannedFrameData[memberId][gameNumber];
     }
 
     // filteredAtt(期間内の出席記録配列)から、frames詳細が付いているゲームだけを対象に
@@ -2853,16 +2897,19 @@ is_splitは、そのフレームの1投目のピン数の数字が丸(サーク�
             : '-';
 
           return `
-            <div style="border-bottom: 1px solid #333; padding: 6px 0; font-size: 12px; display: flex; justify-content: space-between; align-items: center;">
-              <div>
-                <span style="color: #38bdf8; font-weight: bold;">${att.date}</span>
-                <span style="color: #aaa; margin-left: 6px;">[${scores || '記録なし'}]</span>
+            <div style="border-bottom: 1px solid #333; padding: 6px 0; font-size: 12px;">
+              <div style="display: flex; justify-content: space-between; align-items: center; cursor:pointer;" onclick="toggleMyPageHistoryDetail('${att.id}')">
+                <div>
+                  <span style="color: #38bdf8; font-weight: bold;">${att.date}</span>
+                  <span style="color: #aaa; margin-left: 6px;">[${scores || '記録なし'}]</span>
+                </div>
+                <div style="text-align: right;">
+                  <strong style="color: #facc15;">${att.totalScore}点</strong>
+                  <span style="color: #888; font-size: 11px;">(${att.gameCount}G)</span>
+                  <span style="color: #38bdf8; font-size: 11px; margin-left: 4px;">Avg: ${dayAvg}</span>
+                </div>
               </div>
-              <div style="text-align: right;">
-                <strong style="color: #facc15;">${att.totalScore}点</strong>
-                <span style="color: #888; font-size: 11px;">(${att.gameCount}G)</span>
-                <span style="color: #38bdf8; font-size: 11px; margin-left: 4px;">Avg: ${dayAvg}</span>
-              </div>
+              <div id="mypage-history-detail-${att.id}" style="display:none; margin-top:8px;"></div>
             </div>
           `;
         }).join('');
@@ -3226,7 +3273,7 @@ is_splitは、そのフレームの1投目のピン数の数字が丸(サーク�
 
     function renderFrameViewStrip(frames) {
       return frames.map((f, idx) => {
-        const throwsHtml = (f.throws && f.throws.length ? f.throws : ['-']).map(t => `<span>${escapeHtml(String(t))}</span>`).join('');
+        const throwsHtml = (f.throws && f.throws.length ? f.throws : ['-']).map(t => renderThrowMark(t)).join('');
         return `
           <div class="scoreboard-frame${f.is_split ? ' split' : ''}">
             <div class="sb-idx">${idx + 1}</div>
@@ -3235,6 +3282,39 @@ is_splitは、そのフレームの1投目のピン数の数字が丸(サーク�
           </div>
         `;
       }).join('');
+    }
+
+    function toggleMyPageHistoryDetail(sessionId) {
+      const el = document.getElementById(`mypage-history-detail-${sessionId}`);
+      if (!el) return;
+      if (el.style.display === 'block') {
+        el.style.display = 'none';
+        return;
+      }
+      const att = appData.attendance.find(a => a.id === sessionId);
+      const games = (att && att.games) || [];
+      if (games.length === 0) {
+        el.innerHTML = '<p style="font-size:11px; color:#888; margin:0;">記録がありません。</p>';
+      } else {
+        el.innerHTML = games.map(g => {
+          const hasFrames = g.frames && g.frames.length > 0 && g.frames.some(f => f.score != null || (f.throws && f.throws.length));
+          if (!hasFrames) {
+            return `
+              <div style="margin-bottom:10px;">
+                <div class="game-detail-label" style="font-size:12px;">${g.gameNumber}G: ${g.score != null ? g.score : '-'}点</div>
+                <p style="font-size:11px; color:#888; margin:0;">フレーム詳細なし(合計のみの記録です)</p>
+              </div>
+            `;
+          }
+          return `
+            <div style="margin-bottom:10px;">
+              <div class="game-detail-label" style="font-size:12px;">${g.gameNumber}G: ${g.score != null ? g.score : '-'}点</div>
+              <div class="scoreboard-strip">${renderFrameViewStrip(g.frames)}</div>
+            </div>
+          `;
+        }).join('');
+      }
+      el.style.display = 'block';
     }
 
     function showGameDetail(sessionId) {
