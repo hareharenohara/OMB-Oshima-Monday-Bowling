@@ -419,6 +419,10 @@
     .mypage-avatar-btn {
       width: 52px; height: 52px; border-radius: 50%; background:#252525; border:1px solid #444;
       font-size: 26px; display:flex; align-items:center; justify-content:center; cursor:pointer; flex-shrink:0;
+      overflow: hidden;
+    }
+    .mypage-avatar-btn img, .score-avatar img, .ranking-avatar img {
+      width: 100%; height: 100%; object-fit: cover; display: block; border-radius: 50%;
     }
     .avatar-wrapper.mypage .equipped-badge {
       position: absolute;
@@ -440,7 +444,7 @@
     .score-avatar {
       width: 36px; height: 36px; border-radius: 50%; background:#252525; border:1px solid #444;
       font-size: 18px; font-weight:bold; display:flex; align-items:center; justify-content:center;
-      flex-shrink:0; color:#e2e8f0;
+      flex-shrink:0; color:#e2e8f0; overflow: hidden;
     }
     .avatar-wrapper.score .equipped-badge {
       position: absolute;
@@ -464,7 +468,7 @@
       background: linear-gradient(135deg, #334155, #1e293b);
       display:flex; align-items:center; justify-content:center;
       font-size: 18px; font-weight:bold; color:#e2e8f0; flex-shrink:0;
-      border: 1px solid #475569;
+      border: 1px solid #475569; overflow: hidden;
     }
     .ranking-item.rank-1 .ranking-avatar { background: linear-gradient(135deg, #fde68a, #d97706); color:#3f1d00; border-color:#f59e0b; }
     .ranking-item.rank-2 .ranking-avatar { background: linear-gradient(135deg, #e2e8f0, #94a3b8); color:#1e293b; border-color:#94a3b8; }
@@ -496,6 +500,18 @@
       border-radius: 8px; cursor:pointer;
     }
     .avatar-picker-item.selected { border: 2px solid #38bdf8; background: rgba(56,189,248,0.15); }
+
+    /* 写真アバター切り抜きUI */
+    #avatar-crop-stage {
+      position: relative; width: 260px; height: 260px; margin: 0 auto;
+      overflow: hidden; border-radius: 50%; background: #111;
+      touch-action: none; cursor: grab; border: 1px solid #444;
+    }
+    #avatar-crop-stage.dragging { cursor: grabbing; }
+    #avatar-crop-img {
+      position: absolute; top: 0; left: 0; transform-origin: 0 0;
+      user-select: none; -webkit-user-drag: none; pointer-events: none;
+    }
 
     /* スマホ最適化: 狭幅端末でのグリッド調整 */
     @media (max-width: 360px) {
@@ -1035,9 +1051,30 @@
   <div id="modal-avatar-picker" class="modal" style="z-index: 1600;">
     <div class="modal-content" style="max-width: 340px;">
       <h3 style="margin-top:0;">🖼️ アバターを選択</h3>
+      <button class="btn btn-primary" style="width:100%; margin-bottom:12px;" onclick="document.getElementById('avatar-file-input').click()">📷 写真から選ぶ</button>
+      <input type="file" id="avatar-file-input" accept="image/*" style="display:none;" onchange="handleAvatarFileSelect(event)">
+      <div style="font-size:12px; color:#888; margin-bottom:8px;">または絵文字から選ぶ：</div>
       <div id="avatar-picker-grid" class="avatar-picker-grid"></div>
       <div style="text-align: right; margin-top: 15px;">
         <button class="btn btn-secondary" onclick="closeModal('modal-avatar-picker')">閉じる</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="modal-avatar-crop" class="modal" style="z-index: 1700;">
+    <div class="modal-content" style="max-width: 340px;">
+      <h3 style="margin-top:0;">✂️ 写真の位置を調整</h3>
+      <div id="avatar-crop-stage">
+        <img id="avatar-crop-img" src="" alt="" draggable="false">
+      </div>
+      <div style="display:flex; align-items:center; gap:8px; margin-top:14px;">
+        <span style="font-size:13px; color:#888;">🔍</span>
+        <input type="range" id="avatar-crop-zoom" min="100" max="300" value="100" style="flex:1;" oninput="onAvatarZoomChange()">
+      </div>
+      <div style="font-size:11px; color:#888; text-align:center; margin-top:6px;">ドラッグで位置を調整、スライダーで拡大・縮小できます</div>
+      <div style="text-align: right; margin-top: 15px; display:flex; gap:8px; justify-content:flex-end;">
+        <button class="btn btn-secondary" onclick="closeModal('modal-avatar-crop')">キャンセル</button>
+        <button class="btn btn-primary" onclick="confirmAvatarCrop()">この写真を使う</button>
       </div>
     </div>
   </div>
@@ -1285,6 +1322,7 @@ const AVATAR_OPTIONS = [
       document.getElementById('score-date').valueAsDate = new Date();
       document.getElementById('charge-date').valueAsDate = new Date();
       initSupabaseAndCheckSession();
+      setupAvatarCropDragHandlers();
     };
 
     /* ---------------------------------------------------------
@@ -1369,7 +1407,14 @@ const AVATAR_OPTIONS = [
       const btn = document.getElementById('account-btn');
       if (!btn || !supabaseMemberId) return;
       const member = appData.members.find(m => m.id === supabaseMemberId);
-      btn.innerText = (member && member.avatar) ? member.avatar : '👤';
+      const avatar = member && member.avatar;
+      if (isPhotoAvatar(avatar)) {
+        btn.style.cssText = 'width:32px; height:32px; padding:0; border-radius:50%; overflow:hidden;';
+        btn.innerHTML = avatarInnerHtml(avatar, '👤');
+      } else {
+        btn.style.cssText = 'font-size:16px; padding:6px 10px;';
+        btn.innerHTML = avatarInnerHtml(avatar, '👤');
+      }
     }
 
     async function handleSupabaseLogout() {
@@ -1889,7 +1934,7 @@ const AVATAR_OPTIONS = [
             <label class="member-selector">
               <input type="checkbox" class="attendance-check" value="${member.id}" onchange="toggleInputArea('${member.id}')">
               <div class="avatar-wrapper score">
-                <span class="score-avatar">${member.avatar || member.name.charAt(0)}</span>
+                <span class="score-avatar">${avatarInnerHtml(member.avatar, member.name.charAt(0))}</span>
                 ${equippedIcon ? `<span class="equipped-badge" title="装備称号">${equippedIcon}</span>` : ''}
               </div>
               <span style="margin-left: 2px;">${escapeHtml(member.name)}</span>
@@ -2852,7 +2897,7 @@ is_splitは、そのフレームの1投目のピン数の数字が丸(サーク�
       if (endDate) filteredAtt = filteredAtt.filter(a => a.date <= endDate);
 
       document.getElementById('mypage-name').innerText = `${member.name} さんの個人成績`;
-      document.getElementById('mypage-avatar-btn').innerText = member.avatar || member.name.charAt(0);
+      document.getElementById('mypage-avatar-btn').innerHTML = avatarInnerHtml(member.avatar, member.name.charAt(0));
       
       const equippedBadgeEl = document.getElementById('mypage-equipped-badge');
       const equippedIcon = getAchievementIcon(member.equipped);
@@ -3231,7 +3276,7 @@ is_splitは、そのフレームの1投目のピン数の数字が丸(サーク�
         const rankClass = rank <= 3 ? `rank-${rank}` : '';
         const member = appData.members.find(m => m.id === item.id);
         const equippedIcon = member ? getAchievementIcon(member.equipped) : '';
-        const avatarDisplay = (member && member.avatar) ? member.avatar : (item.name ? item.name.charAt(0) : '?');
+        const avatarDisplay = avatarInnerHtml(member && member.avatar, item.name ? item.name.charAt(0) : '?');
         const badgeContent = rank <= 3 ? medals[rank - 1] : rank;
         const sessionId = sessionIdFn ? sessionIdFn(item) : null;
 
@@ -3524,8 +3569,22 @@ is_splitは、そのフレームの1投目のピン数の数字が丸(サーク�
     }
 
     /* ---------------------------------------------------------
-       アバター選択
+       アバター選択（絵文字 / 写真）
        --------------------------------------------------------- */
+
+    // avatar値が写真URLかどうかの判定（http(s)で始まる文字列のみ写真として扱う）
+    function isPhotoAvatar(avatar) {
+      return typeof avatar === 'string' && /^https?:\/\//.test(avatar);
+    }
+
+    // 各所のアバター表示用HTMLを生成（写真なら<img>、それ以外は絵文字/頭文字テキスト）
+    function avatarInnerHtml(avatar, fallbackChar) {
+      if (isPhotoAvatar(avatar)) {
+        return `<img src="${escapeHtml(avatar)}" alt="" style="width:100%;height:100%;object-fit:cover;display:block;border-radius:50%;">`;
+      }
+      return escapeHtml(avatar || fallbackChar || '👤');
+    }
+
     function showAvatarPicker() {
       if (!currentMyPageMemberId) return;
       const member = appData.members.find(m => m.id === currentMyPageMemberId);
@@ -3547,6 +3606,178 @@ is_splitは、そのフレームの1投目のピン数の数字が丸(サーク�
           renderMyPageData();
         });
       });
+    }
+
+    // 写真選択 → 大きすぎる画像は縮小してから切り抜きUIへ渡す
+    function handleAvatarFileSelect(event) {
+      const file = event.target.files && event.target.files[0];
+      event.target.value = ''; // 同じファイルを連続選択しても発火するようにリセット
+      if (!file) return;
+      if (!file.type || !file.type.startsWith('image/')) {
+        showToast('画像ファイルを選択してください');
+        return;
+      }
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const tempImg = new Image();
+        tempImg.onload = () => {
+          // 大きな画像はキャンバス操作を軽くするため長辺1200pxに縮小
+          const MAX = 1200;
+          let w = tempImg.naturalWidth, h = tempImg.naturalHeight;
+          if (w > MAX || h > MAX) {
+            const ratio = Math.min(MAX / w, MAX / h);
+            w = Math.round(w * ratio);
+            h = Math.round(h * ratio);
+          }
+          const resizeCanvas = document.createElement('canvas');
+          resizeCanvas.width = w;
+          resizeCanvas.height = h;
+          resizeCanvas.getContext('2d').drawImage(tempImg, 0, 0, w, h);
+
+          const cropImg = document.getElementById('avatar-crop-img');
+          cropImg.onload = () => {
+            initAvatarCropState(cropImg);
+            closeModal('modal-avatar-picker');
+            showModal('modal-avatar-crop');
+          };
+          cropImg.src = resizeCanvas.toDataURL('image/jpeg', 0.92);
+        };
+        tempImg.onerror = () => showToast('画像の読み込みに失敗しました');
+        tempImg.src = e.target.result;
+      };
+      reader.onerror = () => showToast('ファイルの読み込みに失敗しました');
+      reader.readAsDataURL(file);
+    }
+
+    let avatarCropState = null;
+
+    function initAvatarCropState(imgEl) {
+      const stage = document.getElementById('avatar-crop-stage');
+      const stageSize = stage.clientWidth || 260;
+      const nw = imgEl.naturalWidth, nh = imgEl.naturalHeight;
+      const minScale = stageSize / Math.min(nw, nh); // 円形の枠を必ず埋める最小倍率
+      avatarCropState = {
+        naturalW: nw, naturalH: nh, stageSize,
+        minScale, scale: minScale,
+        offsetX: (stageSize - nw * minScale) / 2,
+        offsetY: (stageSize - nh * minScale) / 2,
+        dragging: false, startX: 0, startY: 0, startOffsetX: 0, startOffsetY: 0
+      };
+      document.getElementById('avatar-crop-zoom').value = 100;
+      applyAvatarCropTransform();
+    }
+
+    function applyAvatarCropTransform() {
+      const s = avatarCropState;
+      if (!s) return;
+      const imgEl = document.getElementById('avatar-crop-img');
+      imgEl.style.width = (s.naturalW * s.scale) + 'px';
+      imgEl.style.height = (s.naturalH * s.scale) + 'px';
+      imgEl.style.transform = `translate(${s.offsetX}px, ${s.offsetY}px)`;
+    }
+
+    function clampAvatarOffset() {
+      const s = avatarCropState;
+      const w = s.naturalW * s.scale, h = s.naturalH * s.scale;
+      s.offsetX = Math.min(0, Math.max(s.stageSize - w, s.offsetX));
+      s.offsetY = Math.min(0, Math.max(s.stageSize - h, s.offsetY));
+    }
+
+    function onAvatarZoomChange() {
+      const s = avatarCropState;
+      if (!s) return;
+      const zoomPct = Number(document.getElementById('avatar-crop-zoom').value);
+      const newScale = s.minScale * (zoomPct / 100);
+      // 中心点を保ったままズームする
+      const cx = s.stageSize / 2, cy = s.stageSize / 2;
+      const relX = (cx - s.offsetX) / s.scale;
+      const relY = (cy - s.offsetY) / s.scale;
+      s.scale = newScale;
+      s.offsetX = cx - relX * s.scale;
+      s.offsetY = cy - relY * s.scale;
+      clampAvatarOffset();
+      applyAvatarCropTransform();
+    }
+
+    // ドラッグ操作（マウス・タッチ共通のPointer Eventsで実装、リスナーは初期化時に一度だけ登録）
+    function setupAvatarCropDragHandlers() {
+      const stage = document.getElementById('avatar-crop-stage');
+      if (!stage) return;
+      stage.addEventListener('pointerdown', (e) => {
+        const s = avatarCropState;
+        if (!s) return;
+        s.dragging = true;
+        s.startX = e.clientX; s.startY = e.clientY;
+        s.startOffsetX = s.offsetX; s.startOffsetY = s.offsetY;
+        stage.classList.add('dragging');
+        stage.setPointerCapture(e.pointerId);
+      });
+      stage.addEventListener('pointermove', (e) => {
+        const s = avatarCropState;
+        if (!s || !s.dragging) return;
+        s.offsetX = s.startOffsetX + (e.clientX - s.startX);
+        s.offsetY = s.startOffsetY + (e.clientY - s.startY);
+        clampAvatarOffset();
+        applyAvatarCropTransform();
+      });
+      const endDrag = (e) => {
+        const s = avatarCropState;
+        if (!s) return;
+        s.dragging = false;
+        stage.classList.remove('dragging');
+      };
+      stage.addEventListener('pointerup', endDrag);
+      stage.addEventListener('pointercancel', endDrag);
+      stage.addEventListener('pointerleave', endDrag);
+    }
+
+    async function confirmAvatarCrop() {
+      const s = avatarCropState;
+      if (!s || !currentMyPageMemberId) return;
+      const imgEl = document.getElementById('avatar-crop-img');
+      const OUT = 400; // 保存する正方形画像の出力サイズ(px)
+      const ratio = OUT / s.stageSize;
+      const canvas = document.createElement('canvas');
+      canvas.width = OUT; canvas.height = OUT;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(
+        imgEl,
+        0, 0, s.naturalW, s.naturalH,
+        s.offsetX * ratio, s.offsetY * ratio, s.naturalW * s.scale * ratio, s.naturalH * s.scale * ratio
+      );
+
+      canvas.toBlob(async (blob) => {
+        if (!blob) { showToast('画像の処理に失敗しました'); return; }
+        document.getElementById('loading').style.display = 'block';
+        const result = await uploadAvatarPhoto(currentMyPageMemberId, blob);
+        document.getElementById('loading').style.display = 'none';
+        showToast(result.message);
+        if (!result.success) return;
+        closeModal('modal-avatar-crop');
+        fetchData(() => {
+          renderMyPageData();
+        });
+      }, 'image/jpeg', 0.88);
+    }
+
+    // Supabase Storageの'avatars'バケットへアップロードし、公開URLをavatarに保存
+    // （事前にSupabase側で'avatars'バケットの作成と、認証済みユーザーへのinsert/update許可ポリシーが必要）
+    async function uploadAvatarPhoto(memberId, blob) {
+      try {
+        const path = `${memberId}/${Date.now()}.jpg`;
+        const { error: uploadError } = await supabaseClient
+          .storage
+          .from('avatars')
+          .upload(path, blob, { contentType: 'image/jpeg', upsert: true });
+        if (uploadError) {
+          return { success: false, message: '写真のアップロードに失敗しました: ' + uploadError.message };
+        }
+        const { data: urlData } = supabaseClient.storage.from('avatars').getPublicUrl(path);
+        const publicUrl = urlData.publicUrl + `?t=${Date.now()}`; // 更新時にキャッシュされないよう付与
+        return await supabaseSetAvatar(memberId, publicUrl);
+      } catch (err) {
+        return { success: false, message: '予期せぬエラーが発生しました: ' + err.message };
+      }
     }
 
     /* ---------------------------------------------------------
