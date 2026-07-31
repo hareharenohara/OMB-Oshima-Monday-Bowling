@@ -1,13 +1,29 @@
 // キャッシュのバージョン。index.html等を更新して公開する際は、
 // このバージョン文字列を必ず変更してください（古いキャッシュを破棄し、
 // ユーザー側に更新を届けるための仕組みです）。
-const CACHE_VERSION = 'omb-cache-v1';
+const CACHE_VERSION = 'omb-cache-v5';
 
 // アプリの外殻（起動に最低限必要なファイル）のみキャッシュ対象とする。
 // Supabaseへの通信やその他の外部APIはキャッシュしない（常に最新のデータを取得する）。
 const APP_SHELL = [
   './',
   './index.html',
+  './css/styles.css',
+  './js/app.js',
+  './js/auth.js',
+  './js/data.js',
+  './js/scores.js',
+  './js/requests.js',
+  './js/vault.js',
+  './js/mypage.js',
+  './js/rankings.js',
+  './js/history.js',
+  './js/achievements.js',
+  './js/avatars.js',
+  './js/ui.js',
+  './js/service-worker-registration.js',
+  './images/login-logo.png',
+  './images/header-logo.png',
   './manifest.json',
   './icons/icon-192.png',
   './icons/icon-512.png',

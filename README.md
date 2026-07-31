@@ -3,11 +3,15 @@
 ## このフォルダの中身
 
 ```
-index.html        本体（マニフェスト読込・SW登録を追加済み）
+index.html        画面構造（HTML）
+css/              画面デザイン（styles.css）
+js/               機能別のJavaScript
+images/           ログイン画面・ヘッダー用ロゴ
 manifest.json      PWAマニフェスト
 sw.js               Service Worker（アプリ外殻のみキャッシュ、Supabase通信はキャッシュしない）
 _headers            Cloudflare Pages用キャッシュ設定（sw.js等を常に最新取得させる）
 icons/              各サイズのアイコン（添付ロゴから生成済み）
+supabase/           Edge Functionのソース
 ```
 
 ## 1. GitHubリポジトリを作る
@@ -54,3 +58,15 @@ icons/              各サイズのアイコン（添付ロゴから生成済み
 - `sw.js`はキャッシュ戦略上「ネットワーク優先」なので、通常はpush後すぐに新しいindex.htmlが反映される
 - キャッシュの世代を明示的に切り替えたい場合は、`sw.js`内の`CACHE_VERSION`の値
   （例: `omb-cache-v1` → `omb-cache-v2`）を変更してからpushする
+
+## 6. 結果票の写真読み取り（Gemini API）
+
+- Gemini APIキーはブラウザへ保存せず、Supabase Edge Function
+  `scan-bowling-slip` のSecretとして管理する
+- Supabase Dashboardの「Edge Functions」→「Secrets」で
+  `GEMINI_API_KEY` を登録する
+- モデルを変更する場合だけ、同じ画面で任意の `GEMINI_MODEL` を登録する
+  （未登録時は `gemini-3.6-flash`）
+- Edge Functionのソースは
+  `supabase/functions/scan-bowling-slip/index.ts` で管理する
+- `.env` ファイルやAPIキーはGitへコミットしない
