@@ -262,7 +262,7 @@
     .scoreboard-frame.split { box-shadow: inset 0 0 0 1px #f87171; }
     .scoreboard-frame .sb-idx { font-size: 8px; color: #aaa; text-align: center; padding: 1px 0; border-bottom: 1px solid #444; background: #222; font-weight: normal; }
     .scoreboard-frame .sb-throws { display: flex; width: 100%; }
-    .scoreboard-frame .sb-throws > span, .scoreboard-frame .sb-throws > input {
+    .scoreboard-frame .sb-throws > span, .scoreboard-frame .sb-throws > input, .scoreboard-frame .sb-throws > .sb-throw-btn {
       flex: 1 1 0; min-width: 0; aspect-ratio: 1 / 1;
       display: flex; align-items: center; justify-content: center;
       text-align: center; font-size: 10px; font-weight: bold; color: #fff;
@@ -270,7 +270,7 @@
       padding: 0; background: #181818; border-top: none; border-left: none; box-sizing: border-box;
     }
     .scoreboard-frame .sb-throws > svg.mark-icon { flex: 1 1 0; min-width: 0; aspect-ratio: 1 / 1; border-right: 1px solid #444; border-bottom: 1px solid #444; background: #181818; box-sizing: border-box; }
-    .scoreboard-frame .sb-throws > span:last-child, .scoreboard-frame .sb-throws > input:last-child, .scoreboard-frame .sb-throws > svg.mark-icon:last-child { border-right: none; }
+    .scoreboard-frame .sb-throws > span:last-child, .scoreboard-frame .sb-throws > input:last-child, .scoreboard-frame .sb-throws > svg.mark-icon:last-child, .scoreboard-frame .sb-throws > .sb-throw-btn:last-child { border-right: none; }
     .scoreboard-frame .sb-score { display: flex; align-items: center; justify-content: center; text-align: center; font-size: 11px; font-weight: bold; color: #00e676; padding: 2px 0; font-family: monospace; background: #0d0d0d; }
     .scoreboard-frame .sb-score input { width: 100%; background: transparent; border: none; color: #00e676; font-weight: bold; font-family: monospace; font-size: 11px; text-align: center; padding: 0; }
     .scoreboard-frame .sb-split-toggle { display: flex; justify-content: center; align-items: center; padding: 1px 0; border-top: 1px solid #444; background: #111; }
@@ -288,12 +288,21 @@
     .score-table-row { display: flex; align-items: center; gap: 6px; margin-bottom: 6px; }
     .score-table-glabel { flex: 0 0 22px; font-size: 11px; color: #888; font-weight: bold; }
     .score-table-strip { flex: 1 1 auto; min-width: 0; margin-bottom: 0; }
-    .score-table-total { flex: 0 0 40px; text-align: right; font-size: 13px; font-weight: bold; color: #38bdf8; }
     .score-table-empty-hint { font-size: 11px; color: #666; text-align: center; padding: 6px; border: 1px dashed #333; border-radius: 6px; }
     .score-table-strip .sb-idx { font-size: 7px; padding: 0; }
     .score-table-strip .sb-throws > span, .score-table-strip .sb-throws > svg.mark-icon { font-size: 9px; }
     .score-table-strip .sb-score { font-size: 9px; padding: 1px 0; }
     .score-table-strip .mark-box { font-size: 7px; padding: 0 1px; }
+
+    /* フレーム編集用テンキー */
+    .sb-throw-btn { cursor: pointer; user-select: none; }
+    .sb-throw-btn.selected { background: #38bdf8 !important; color: #121212 !important; }
+    .keypad-hint { font-size: 11px; color: #888; margin-top: 8px; text-align: center; }
+    .keypad-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; margin-top: 8px; }
+    .keypad-btn { padding: 12px 0; background: #2a2a2a; border: 1px solid #444; border-radius: 8px; color: #fff; font-size: 16px; font-weight: bold; text-align: center; }
+    .keypad-btn:active { background: #38bdf8; color: #121212; }
+    .keypad-btn-sym { color: #38bdf8; }
+    .keypad-btn-clear { color: #f87171; font-size: 12px; grid-column: span 1; }
     .game-detail-label { font-size: 13px; font-weight: bold; color: #38bdf8; margin-bottom: 4px; }
 
     /* テーブル・アコーディオン */
@@ -835,11 +844,28 @@
   <div id="modal-frame-edit" class="modal" style="z-index:1700;">
     <div class="modal-content" style="max-width: 480px;">
       <h3 style="margin-top:0;">🎳 フレーム詳細の確認・修正</h3>
-      <p style="font-size:12px; color:#aaa; margin-top:-6px;">枠に投球結果を入力してください。ストライク=X / スペア=/ / ミス=- / ガター=G / ファール=F / それ以外は倒したピン数の数字。下段はその時点の累積スコアです。</p>
+      <p style="font-size:12px; color:#aaa; margin-top:-6px;">投球欄をタップして選択し、下のボタンで入力してください。下段はその時点の累積スコアです。</p>
       <input type="hidden" id="frame-edit-member-id">
       <input type="hidden" id="frame-edit-game-number">
       <div class="table-scroll">
         <div class="scoreboard-strip" id="frame-edit-strip"></div>
+      </div>
+      <div class="keypad-grid" id="frame-edit-keypad">
+        <button type="button" class="keypad-btn keypad-btn-sym" onclick="applyKeypadValue('X')">X</button>
+        <button type="button" class="keypad-btn keypad-btn-sym" onclick="applyKeypadValue('/')">/</button>
+        <button type="button" class="keypad-btn keypad-btn-sym" onclick="applyKeypadValue('G')">G</button>
+        <button type="button" class="keypad-btn keypad-btn-sym" onclick="applyKeypadValue('F')">F</button>
+        <button type="button" class="keypad-btn keypad-btn-sym" onclick="applyKeypadValue('-')">－</button>
+        <button type="button" class="keypad-btn" onclick="applyKeypadValue('1')">1</button>
+        <button type="button" class="keypad-btn" onclick="applyKeypadValue('2')">2</button>
+        <button type="button" class="keypad-btn" onclick="applyKeypadValue('3')">3</button>
+        <button type="button" class="keypad-btn" onclick="applyKeypadValue('4')">4</button>
+        <button type="button" class="keypad-btn" onclick="applyKeypadValue('5')">5</button>
+        <button type="button" class="keypad-btn" onclick="applyKeypadValue('6')">6</button>
+        <button type="button" class="keypad-btn" onclick="applyKeypadValue('7')">7</button>
+        <button type="button" class="keypad-btn" onclick="applyKeypadValue('8')">8</button>
+        <button type="button" class="keypad-btn" onclick="applyKeypadValue('9')">9</button>
+        <button type="button" class="keypad-btn keypad-btn-clear" onclick="applyKeypadValue('')">クリア</button>
       </div>
       <div style="text-align:right; margin-top:10px; font-size:14px;">
         合計: <strong id="frame-edit-total" style="color:#38bdf8; font-size:18px;">0</strong> 点
@@ -2052,7 +2078,6 @@ const AVATAR_OPTIONS = [
       for (let gameNumber = 1; gameNumber <= gc; gameNumber++) {
         const fd = (scannedFrameData[memberId] && scannedFrameData[memberId][gameNumber]) || null;
         const frames = fd ? fd.frames : blankFrames();
-        const total = fd ? fd.total : null;
         const cellsHtml = frames.map((f, idx) => {
           const throwsHtml = padThrowsForDisplay(f.throws, idx).map((t, ti) => renderThrowMark(t, ti === 0, f.is_split)).join('');
           return `
@@ -2068,7 +2093,6 @@ const AVATAR_OPTIONS = [
           <div class="score-table-row" onclick="openFrameEditModal('${memberId}', ${gameNumber})">
             <div class="score-table-glabel">${gameNumber}G</div>
             <div class="scoreboard-strip score-table-strip">${cellsHtml}</div>
-            <div class="score-table-total">${total != null ? total : '-'}</div>
           </div>
         `;
       }
@@ -2260,26 +2284,51 @@ is_splitは、そのフレームの1投目のピン数の数字が丸(サーク�
       showModal('modal-frame-edit');
     }
 
+    let frameEditSelectedBtn = null;
+
     function renderFrameEditStrip(frames) {
       const strip = document.getElementById('frame-edit-strip');
       strip.innerHTML = '';
+      frameEditSelectedBtn = null;
       frames.forEach((f, idx) => {
         const cell = document.createElement('div');
         cell.className = 'scoreboard-frame' + (f.is_split ? ' split' : '');
         const throwsArr = padThrowsForDisplay(f.throws, idx);
-        const throwsHtml = throwsArr.map(t => `<input type="text" class="sb-throw" maxlength="2" value="${escapeHtml(String(t))}">`).join('');
+        const throwsHtml = throwsArr.map((t, ti) => `<div class="sb-throw-btn" data-frame="${idx}" data-throw="${ti}">${escapeHtml(t)}</div>`).join('');
         cell.innerHTML = `
           <div class="sb-idx">${idx + 1}</div>
           <div class="sb-throws">${throwsHtml}</div>
-          <div class="sb-score"><input type="text" class="sb-score-input" value="${f.score != null ? f.score : ''}"></div>
+          <div class="sb-score"><input type="text" inputmode="numeric" class="sb-score-input" value="${f.score != null ? f.score : ''}"></div>
           <div class="sb-split-toggle"><input type="checkbox" class="sb-split-check" title="スプリット" ${f.is_split ? 'checked' : ''}></div>
         `;
         strip.appendChild(cell);
       });
-      strip.querySelectorAll('input[type="text"]').forEach(inp => inp.addEventListener('input', recalcFrameEditTotal));
+      strip.querySelectorAll('.sb-throw-btn').forEach(btn => btn.addEventListener('click', () => selectThrowBtn(btn)));
+      strip.querySelectorAll('.sb-score-input').forEach(inp => inp.addEventListener('input', recalcFrameEditTotal));
       strip.querySelectorAll('.sb-split-check').forEach(chk => chk.addEventListener('change', (e) => {
         e.target.closest('.scoreboard-frame').classList.toggle('split', e.target.checked);
       }));
+    }
+
+    // 投球欄(テンキー入力対象)を選択状態にする
+    function selectThrowBtn(btn) {
+      if (frameEditSelectedBtn) frameEditSelectedBtn.classList.remove('selected');
+      frameEditSelectedBtn = btn;
+      btn.classList.add('selected');
+    }
+
+    // テンキーのボタンが押された時、選択中の投球欄に値を反映する
+    function applyKeypadValue(val) {
+      if (!frameEditSelectedBtn) return;
+      frameEditSelectedBtn.textContent = val;
+      recalcFrameEditTotal();
+      const next = frameEditSelectedBtn.nextElementSibling;
+      frameEditSelectedBtn.classList.remove('selected');
+      if (next && next.classList.contains('sb-throw-btn')) {
+        selectThrowBtn(next);
+      } else {
+        frameEditSelectedBtn = null;
+      }
     }
 
     function recalcFrameEditTotal() {
@@ -2297,7 +2346,7 @@ is_splitは、そのフレームの1投目のピン数の数字が丸(サーク�
       const gameNumber = Number(document.getElementById('frame-edit-game-number').value);
       const cells = document.querySelectorAll('#frame-edit-strip .scoreboard-frame');
       const frames = Array.from(cells).map(cell => ({
-        throws: Array.from(cell.querySelectorAll('.sb-throw')).map(i => i.value.trim()).filter(v => v !== ''),
+        throws: Array.from(cell.querySelectorAll('.sb-throw-btn')).map(b => b.textContent.trim()).filter(v => v !== ''),
         score: (() => { const v = cell.querySelector('.sb-score-input').value; return v === '' ? null : Number(v); })(),
         is_split: cell.querySelector('.sb-split-check').checked
       }));
