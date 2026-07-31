@@ -111,8 +111,62 @@
       }
 
       showToast('申請を送信しました。管理者の承認をお待ちください。');
+      notifyRequestEvent('admins', null, 'score-submitted');
       delete scannedFrameData[key];
       closeModal('modal-score-request');
+    }
+
+    function openTicketRequestModal() {
+      if (!supabaseMemberId) return showToast('ログイン情報を取得できませんでした');
+      document.getElementById('ticket-request-type').value = 'purchase';
+      document.getElementById('ticket-request-packs').value = 1;
+      document.getElementById('ticket-request-note').value = '';
+      updateTicketRequestForm();
+      showModal('modal-ticket-request');
+      loadMyTicketRequests();
+    }
+
+    function updateTicketRequestForm() {
+      const isPurchase = document.getElementById('ticket-request-type').value === 'purchase';
+      document.getElementById('ticket-payment-field').style.display = isPurchase ? 'block' : 'none';
+    }
+
+    async function loadMyTicketRequests() {
+      const container = document.getElementById('ticket-request-mine');
+      const { data, error } = await supabaseClient.from('requests')
+        .select('id,type,packs,status,created_at,reject_reason')
+        .eq('member_id', supabaseMemberId).in('type', ['purchase', 'return'])
+        .order('created_at', { ascending: false }).limit(5);
+      if (error || !data || data.length === 0) {
+        container.innerHTML = '';
+        return;
+      }
+      container.innerHTML = '<div style="font-size:11px;color:#888;margin-top:12px;border-top:1px dashed #444;padding-top:8px;">直近の申請状況</div>' + data.map((r) => {
+        const status = r.status === 'pending' ? '⏳ 承認待ち' : r.status === 'approved' ? '✅ 承認済み' : `❌ 却下${r.reject_reason ? '（' + escapeHtml(r.reject_reason) + '）' : ''}`;
+        return `<div style="font-size:12px;display:flex;justify-content:space-between;padding:3px 0;"><span>${r.type === 'purchase' ? '購入' : '返還'} ${r.packs}冊</span><span>${status}</span></div>`;
+      }).join('');
+    }
+
+    async function submitTicketRequest() {
+      const type = document.getElementById('ticket-request-type').value;
+      const packs = Number(document.getElementById('ticket-request-packs').value);
+      if (!Number.isInteger(packs) || packs < 1) return showToast('冊数は1以上の整数で入力してください');
+      const row = {
+        type,
+        member_id: supabaseMemberId,
+        status: 'pending',
+        date: new Date().toISOString().slice(0, 10),
+        packs,
+        payment_method: type === 'purchase' ? document.getElementById('ticket-request-payment').value : null,
+        note: document.getElementById('ticket-request-note').value.trim() || null,
+      };
+      document.getElementById('loading').style.display = 'block';
+      const { error } = await supabaseClient.from('requests').insert(row);
+      document.getElementById('loading').style.display = 'none';
+      if (error) return showToast('申請に失敗しました: ' + error.message);
+      showToast(type === 'purchase' ? '購入申請を送信しました。' : '返還申請を送信しました。');
+      closeModal('modal-ticket-request');
+      notifyRequestEvent('admins', null, type + '-submitted');
     }
 
     /* ---------------------------------------------------------
@@ -139,7 +193,7 @@
       container.innerHTML = '<p style="font-size:12px; color:#888;">読み込み中...</p>';
 
       if (approvalType === 'purchase') {
-        container.innerHTML = '<p style="font-size:12px; color:#888;">回数券の申請承認は今後実装予定です。</p>';
+        await loadTicketApprovalList(container);
         return;
       }
 
@@ -186,6 +240,56 @@
       }).join('');
     }
 
+    async function loadTicketApprovalList(container) {
+      const { data, error } = await supabaseClient.from('requests')
+        .select('id,type,packs,payment_method,note,created_at,member_id,members(name)')
+        .in('type', ['purchase', 'return']).eq('status', 'pending')
+        .order('created_at', { ascending: true });
+      if (error) {
+        container.innerHTML = `<p style="font-size:12px;color:#f87171;">読み込みエラー: ${escapeHtml(error.message)}</p>`;
+        return;
+      }
+      if (!data || data.length === 0) {
+        container.innerHTML = '<p style="font-size:12px;color:#888;">承認待ちの回数券申請はありません。</p>';
+        return;
+      }
+      container.innerHTML = data.map((req) => `<div class="card" style="margin-bottom:10px;">
+        <div style="display:flex;justify-content:space-between;"><b>${escapeHtml(req.members?.name || '不明なメンバー')}</b><span>${req.type === 'purchase' ? '購入' : '返還'} ${req.packs}冊</span></div>
+        <div style="font-size:12px;color:#aaa;margin-top:6px;">${req.type === 'purchase' ? '受け渡し: ' + (req.payment_method === 'ticket' ? '回数券' : '現金') : '退会時の回数券返還'}${req.note ? '<br>備考: ' + escapeHtml(req.note) : ''}</div>
+        <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:8px;"><button class="btn btn-danger btn-sm" onclick="rejectTicketRequest('${req.id}')">却下</button><button class="btn btn-success btn-sm" onclick="approveTicketRequest('${req.id}')">承認</button></div>
+      </div>`).join('');
+    }
+
+    async function approveTicketRequest(requestId) {
+      document.getElementById('loading').style.display = 'block';
+      const { data: req, error: fetchError } = await supabaseClient.from('requests').select('*').eq('id', requestId).single();
+      if (fetchError || !req) {
+        document.getElementById('loading').style.display = 'none';
+        return showToast('申請の取得に失敗しました: ' + (fetchError?.message || ''));
+      }
+      const result = await supabaseSaveDeposit({ memberId: req.member_id, date: req.date || new Date().toISOString().slice(0, 10), packs: req.type === 'return' ? -req.packs : req.packs, note: req.note || (req.type === 'return' ? '退会時返還' : '購入申請から承認') });
+      if (!result.success) {
+        document.getElementById('loading').style.display = 'none';
+        return showToast('残高への反映に失敗しました: ' + result.message);
+      }
+      const { error } = await supabaseClient.from('requests').update({ status: 'approved', decided_at: new Date().toISOString(), decided_by: supabaseMemberId }).eq('id', requestId).eq('status', 'pending');
+      document.getElementById('loading').style.display = 'none';
+      if (error) return showToast('承認状態の更新に失敗しました: ' + error.message);
+      showToast('回数券申請を承認し、残高に反映しました。');
+      notifyRequestEvent('member', req.member_id, req.type + '-approved');
+      loadApprovalList(); refreshPendingRequestBadge(); fetchData();
+    }
+
+    async function rejectTicketRequest(requestId) {
+      const reason = window.prompt('却下理由（任意・申請者に表示されます）:') || null;
+      const { data: req } = await supabaseClient.from('requests').select('member_id,type').eq('id', requestId).single();
+      const { error } = await supabaseClient.from('requests').update({ status: 'rejected', decided_at: new Date().toISOString(), decided_by: supabaseMemberId, reject_reason: reason }).eq('id', requestId).eq('status', 'pending');
+      if (error) return showToast('却下に失敗しました: ' + error.message);
+      showToast('申請を却下しました。');
+      if (req) notifyRequestEvent('member', req.member_id, req.type + '-rejected');
+      loadApprovalList(); refreshPendingRequestBadge();
+    }
+
     async function approveScoreRequest(requestId) {
       document.getElementById('loading').style.display = 'block';
 
@@ -224,6 +328,7 @@
       if (updErr) return showToast('承認状態の更新に失敗しました: ' + updErr.message);
 
       showToast('スコアを承認し、記録に反映しました。');
+      notifyRequestEvent('member', req.member_id, 'score-approved');
       loadApprovalList();
       refreshPendingRequestBadge();
       fetchData();
@@ -231,6 +336,7 @@
 
     async function rejectScoreRequest(requestId) {
       const reason = window.prompt('却下理由（任意・申請者に表示されます）:') || null;
+      const { data: req } = await supabaseClient.from('requests').select('member_id').eq('id', requestId).single();
       document.getElementById('loading').style.display = 'block';
       const { error } = await supabaseClient
         .from('requests')
@@ -239,6 +345,7 @@
       document.getElementById('loading').style.display = 'none';
       if (error) return showToast('却下に失敗しました: ' + error.message);
       showToast('申請を却下しました。');
+      if (req) notifyRequestEvent('member', req.member_id, 'score-rejected');
       loadApprovalList();
       refreshPendingRequestBadge();
     }

@@ -70,6 +70,7 @@
       document.getElementById('login-gate').classList.add('hidden');
       fetchData();
       refreshPendingRequestBadge();
+      checkPushSubscriptionState();
     }
 
     function openMyOwnPage() {

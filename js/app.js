@@ -9,6 +9,8 @@ let appData = {};
     // ▼▼▼ ここを自分のSupabaseプロジェクトの値に書き換えてください ▼▼▼
     const SUPABASE_URL = 'https://fbzqvortdzfpxxhvjrkz.supabase.co';
     const SUPABASE_ANON_KEY = 'sb_publishable_07HUXG1yjwBtmpGNvNY5kA_vOAAv9pv';
+    // Supabase Secret PUSH_VAPID_PUBLIC_KEY と同じ公開鍵を設定する。
+    const PUSH_VAPID_PUBLIC_KEY = 'BHDDst9gWdOluvVxKV3ml3vL7RjdPWmDKZWhSJmLA9iCzggNRi1Uk87N_6wSFe6KZcDQDA676UyScAgeOv1yLy0';
     // ▲▲▲ ここまで ▲▲▲
     let supabaseClient = null;
     let supabaseUser = null;      // ログイン中のSupabase authユーザー

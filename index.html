@@ -44,6 +44,8 @@
     <div style="display:flex; align-items:center; gap:8px;">
       <button id="account-btn" class="btn btn-secondary btn-sm" onclick="openMyOwnPage()" title="マイページ" style="font-size:16px; padding:6px 10px;">👤</button>
       <button class="btn btn-secondary btn-sm" onclick="openScoreRequestModal()" title="スコアを申請">🧾</button>
+      <button class="btn btn-secondary btn-sm" onclick="openTicketRequestModal()" title="回数券の購入・返還を申請">🎟️</button>
+      <button id="push-notification-btn" class="btn btn-secondary btn-sm" onclick="enablePushNotifications()" title="通知を有効にする">🔔</button>
       <button class="btn btn-secondary btn-sm admin-only" onclick="openApprovalCenter()" title="承認センター" style="position:relative;">
         📋<span id="approval-center-badge" style="display:none; position:absolute; top:-4px; right:-4px; background:#ef4444; color:#fff; border-radius:10px; font-size:10px; padding:1px 5px; line-height:1;"></span>
       </button>
@@ -579,6 +581,37 @@
       <div style="display:flex; justify-content:space-between; margin-top:14px;">
         <button class="btn btn-secondary" onclick="closeModal('modal-score-request')">キャンセル</button>
         <button class="btn btn-success" onclick="submitScoreRequest()">📤 申請を送信</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 回数券申請モーダル -->
+  <div id="modal-ticket-request" class="modal">
+    <div class="modal-content" style="max-width:420px;">
+      <h3 style="margin-top:0;">🎟️ 回数券の申請</h3>
+      <p style="font-size:12px; color:#aaa;">購入または退会時の返還を申請します。管理者が現金・回数券を確認した後に残高へ反映されます。</p>
+      <label style="display:block; font-size:13px; margin-bottom:10px;">申請内容
+        <select id="ticket-request-type" onchange="updateTicketRequestForm()" style="width:100%; margin-top:4px;">
+          <option value="purchase">購入</option>
+          <option value="return">返還（退会時）</option>
+        </select>
+      </label>
+      <label style="display:block; font-size:13px; margin-bottom:10px;">冊数
+        <input id="ticket-request-packs" type="number" min="1" step="1" value="1" style="width:100%; margin-top:4px;">
+      </label>
+      <label id="ticket-payment-field" style="display:block; font-size:13px; margin-bottom:10px;">受け渡し方法
+        <select id="ticket-request-payment" style="width:100%; margin-top:4px;">
+          <option value="cash">現金</option>
+          <option value="ticket">回数券</option>
+        </select>
+      </label>
+      <label style="display:block; font-size:13px;">備考（任意）
+        <textarea id="ticket-request-note" rows="2" maxlength="200" style="width:100%; margin-top:4px;"></textarea>
+      </label>
+      <div id="ticket-request-mine"></div>
+      <div style="display:flex; justify-content:space-between; margin-top:14px;">
+        <button class="btn btn-secondary" onclick="closeModal('modal-ticket-request')">キャンセル</button>
+        <button class="btn btn-success" onclick="submitTicketRequest()">📤 申請を送信</button>
       </div>
     </div>
   </div>

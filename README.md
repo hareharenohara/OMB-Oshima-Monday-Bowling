@@ -70,3 +70,25 @@ supabase/           Edge Functionのソース
 - Edge Functionのソースは
   `supabase/functions/scan-bowling-slip/index.ts` で管理する
 - `.env` ファイルやAPIキーはGitへコミットしない
+
+## 7. 承認申請とプッシュ通知
+
+1. Supabase SQL Editorで `supabase/migrations/202607310001_requests_and_push.sql` を実行する。
+   このプロジェクトでは、`members.auth_user_id`を認証ユーザーとの紐付けに使用する。
+2. VAPID鍵を生成する（秘密鍵はGitへコミットしない）。
+   ```powershell
+   node scripts/generate-vapid-keys.mjs
+   ```
+3. 出力された公開鍵を `js/app.js` の `PUSH_VAPID_PUBLIC_KEY` に設定する。
+4. Supabase Edge FunctionのSecretsに次を登録する。
+   - `PUSH_VAPID_PUBLIC_KEY`: 手順2の公開鍵
+   - `PUSH_VAPID_PRIVATE_KEY`: 手順2の秘密鍵
+   - `PUSH_VAPID_SUBJECT`: 管理者の連絡先（例 `mailto:admin@example.com`）
+5. `send-request-notification` をデプロイする。
+   ```powershell
+   supabase functions deploy send-request-notification
+   ```
+6. アプリへログインし、ヘッダーの「🔕」を押して端末ごとに通知を許可する。
+
+通知送信に失敗しても、申請・承認処理自体は完了する。iPhoneではホーム画面へ追加した
+PWAを開いて通知を許可する必要がある。
