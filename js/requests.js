@@ -199,7 +199,7 @@
 
       const { data, error } = await supabaseClient
         .from('requests')
-        .select('id, date, games, source, created_at, member_id, members(name)')
+        .select('id, date, games, source, created_at, member_id')
         .eq('type', 'score')
         .eq('status', 'pending')
         .order('created_at', { ascending: true });
@@ -213,8 +213,10 @@
         return;
       }
 
+      const memberNames = await loadRequestMemberNames(data);
+
       container.innerHTML = data.map(req => {
-        const memberName = req.members ? req.members.name : '(不明なメンバー)';
+        const memberName = memberNames[req.member_id] || '(不明なメンバー)';
         const gamesHtml = (req.games || []).map(g => {
           const frames = normalizeFrames(g.frames);
           return `
@@ -242,7 +244,7 @@
 
     async function loadTicketApprovalList(container) {
       const { data, error } = await supabaseClient.from('requests')
-        .select('id,type,packs,payment_method,note,created_at,member_id,members(name)')
+        .select('id,type,packs,payment_method,note,created_at,member_id')
         .in('type', ['purchase', 'return']).eq('status', 'pending')
         .order('created_at', { ascending: true });
       if (error) {
@@ -253,11 +255,23 @@
         container.innerHTML = '<p style="font-size:12px;color:#888;">承認待ちの回数券申請はありません。</p>';
         return;
       }
+      const memberNames = await loadRequestMemberNames(data);
       container.innerHTML = data.map((req) => `<div class="card" style="margin-bottom:10px;">
-        <div style="display:flex;justify-content:space-between;"><b>${escapeHtml(req.members?.name || '不明なメンバー')}</b><span>${req.type === 'purchase' ? '購入' : '返還'} ${req.packs}冊</span></div>
+        <div style="display:flex;justify-content:space-between;"><b>${escapeHtml(memberNames[req.member_id] || '不明なメンバー')}</b><span>${req.type === 'purchase' ? '購入' : '返還'} ${req.packs}冊</span></div>
         <div style="font-size:12px;color:#aaa;margin-top:6px;">${req.type === 'purchase' ? '受け渡し: ' + (req.payment_method === 'ticket' ? '回数券' : '現金') : '退会時の回数券返還'}${req.note ? '<br>備考: ' + escapeHtml(req.note) : ''}</div>
         <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:8px;"><button class="btn btn-danger btn-sm" onclick="rejectTicketRequest('${req.id}')">却下</button><button class="btn btn-success btn-sm" onclick="approveTicketRequest('${req.id}')">承認</button></div>
       </div>`).join('');
+    }
+
+    async function loadRequestMemberNames(requests) {
+      const ids = [...new Set((requests || []).map((req) => req.member_id).filter(Boolean))];
+      if (ids.length === 0) return {};
+      const { data, error } = await supabaseClient.from('members').select('id,name').in('id', ids);
+      if (error) {
+        console.warn('申請者名の取得に失敗しました:', error.message);
+        return {};
+      }
+      return Object.fromEntries((data || []).map((member) => [member.id, member.name]));
     }
 
     async function approveTicketRequest(requestId) {
