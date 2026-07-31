@@ -2211,7 +2211,11 @@ is_splitは、そのフレームの1投目のピン数の数字が丸(サーク�
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             contents: [{ parts: [{ text: prompt }, { inline_data: { mime_type: mime, data: base64 } }] }],
-            generationConfig: { responseMimeType: 'application/json', temperature: 0, maxOutputTokens: 8192 }
+            generationConfig: {
+  responseMimeType: 'application/json',
+  temperature: 0,
+  maxOutputTokens: 8192,
+  thinkingConfig: { thinkingLevel: 'minimal' } 
           })
         });
         if (!res.ok) {
