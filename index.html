@@ -2491,11 +2491,20 @@ is_splitは、そのフレームの1投目のピン数の数字が丸(サーク�
        メンバー本人が結果票を読み取り／手入力し、requestsテーブルに
        status='pending'で登録する。実際のsessions/games/framesへの
        反映は管理者が承認センターで承認した時点で行う。
+
+       注意：管理者用の「スコア入力」タブにも自分自身の行が表示され、
+       scan-file-${memberId} 等が同じmemberIdで既に存在しうるため、
+       このモーダル内の要素IDは全て "-req" サフィックス付きの
+       別キー(reqKey)を使ってIDの衝突を避ける。
        --------------------------------------------------------- */
+    function reqKey(memberId) {
+      return memberId + '-req';
+    }
+
     function openScoreRequestModal() {
       if (!supabaseMemberId) return showToast('ログイン情報を取得できませんでした');
-      const mId = supabaseMemberId;
-      if (!scannedFrameData[mId]) scannedFrameData[mId] = {};
+      const key = reqKey(supabaseMemberId);
+      if (!scannedFrameData[key]) scannedFrameData[key] = {};
       const todayStr = new Date().toISOString().slice(0, 10);
 
       document.getElementById('score-request-body').innerHTML = `
@@ -2503,14 +2512,14 @@ is_splitは、そのフレームの1投目のピン数の数字が丸(サーク�
           <label style="font-size:13px; font-weight:bold;">実施日: <input type="date" id="score-request-date" value="${todayStr}"></label>
         </div>
         <div class="scan-row">
-          <img class="scan-preview-thumb" id="scan-thumb-${mId}" alt="">
-          <button type="button" class="btn btn-sm btn-scan-photo" onclick="triggerScorePhoto('${mId}')">📷 結果票を読み取る</button>
-          <span class="scan-status-text" id="scan-status-${mId}"></span>
-          <input type="file" accept="image/*" capture="environment" id="scan-file-${mId}" style="display:none;" onchange="handleScorePhotoSelected('${mId}', this)">
+          <img class="scan-preview-thumb" id="scan-thumb-${key}" alt="">
+          <button type="button" class="btn btn-sm btn-scan-photo" onclick="triggerScorePhoto('${key}')">📷 結果票を読み取る</button>
+          <span class="scan-status-text" id="scan-status-${key}"></span>
+          <input type="file" accept="image/*" capture="environment" id="scan-file-${key}" style="display:none;" onchange="handleScorePhotoSelected('${key}', this)">
         </div>
         <div style="display:flex; justify-content:space-between; align-items:center; font-size:12px; margin-bottom:8px;">
           <span>投球G数:
-            <select id="gc-${mId}" onchange="updateGameSlots('${mId}')" style="padding:2px 4px;">
+            <select id="gc-${key}" onchange="updateGameSlots('${key}')" style="padding:2px 4px;">
               <option value="1">1 G</option>
               <option value="2">2 G</option>
               <option value="3" selected>3 G</option>
@@ -2519,10 +2528,10 @@ is_splitは、そのフレームの1投目のピン数の数字が丸(サーク�
             </select>
           </span>
         </div>
-        <div class="score-table" id="score-table-${mId}"></div>
-        <div id="calc-result-${mId}" style="text-align:right; font-size:12px; font-weight:bold; margin-top:6px; color:#38bdf8;"></div>
+        <div class="score-table" id="score-table-${key}"></div>
+        <div id="calc-result-${key}" style="text-align:right; font-size:12px; font-weight:bold; margin-top:6px; color:#38bdf8;"></div>
       `;
-      renderScoreTable(mId);
+      renderScoreTable(key);
       showModal('modal-score-request');
       loadMyPendingRequests();
     }
@@ -2554,16 +2563,17 @@ is_splitは、そのフレームの1投目のピン数の数字が丸(サーク�
     async function submitScoreRequest() {
       const mId = supabaseMemberId;
       if (!mId) return showToast('ログイン情報を取得できませんでした');
+      const key = reqKey(mId);
 
       const date = document.getElementById('score-request-date').value;
       if (!date) return showToast('実施日を入力してください');
 
-      const gc = parseInt(document.getElementById(`gc-${mId}`).value) || 0;
+      const gc = parseInt(document.getElementById(`gc-${key}`).value) || 0;
       if (gc === 0) return showToast('投球ゲーム数を選択してください');
 
       const games = [];
       for (let gameNumber = 1; gameNumber <= gc; gameNumber++) {
-        const fd = scannedFrameData[mId] && scannedFrameData[mId][gameNumber];
+        const fd = scannedFrameData[key] && scannedFrameData[key][gameNumber];
         if (!fd || fd.total == null) {
           return showToast(`${gameNumber}ゲーム目のスコアが未入力です。枠をタップして入力してください。`);
         }
@@ -2589,7 +2599,7 @@ is_splitは、そのフレームの1投目のピン数の数字が丸(サーク�
       }
 
       showToast('申請を送信しました。管理者の承認をお待ちください。');
-      delete scannedFrameData[mId];
+      delete scannedFrameData[key];
       closeModal('modal-score-request');
     }
 
