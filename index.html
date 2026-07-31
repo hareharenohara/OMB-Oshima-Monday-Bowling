@@ -2215,7 +2215,8 @@ is_splitは、そのフレームの1投目のピン数の数字が丸(サーク�
   responseMimeType: 'application/json',
   temperature: 0,
   maxOutputTokens: 8192,
-  thinkingConfig: { thinkingLevel: 'minimal' } 
+  thinkingConfig: { thinkingLevel: 'minimal' } // ← 追加。効果薄ければ 'low' に
+}
           })
         });
         if (!res.ok) {
