@@ -411,6 +411,23 @@
     .ranking-score-box { text-align: right; }
     .ranking-main-score { font-size: 15px; font-weight: bold; color: #facc15; }
     .ranking-sub-score { font-size: 11px; color: #aaa; }
+    .ranking-detail-btn {
+      width: 30px;
+      height: 30px;
+      border-radius: 50%;
+      background: rgba(56, 189, 248, 0.08);
+      border: 1px solid rgba(56, 189, 248, 0.3);
+      color: #38bdf8;
+      font-size: 13px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      margin-left: 8px;
+      cursor: pointer;
+      transition: background 0.2s, opacity 0.2s;
+    }
+    .ranking-detail-btn:active { opacity: 0.6; background: rgba(56, 189, 248, 0.2); }
 
     /* 保存サマリー・回数券台帳・ランキング拡張スタイル */
     .summary-stat-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 14px 0; }
@@ -3389,9 +3406,9 @@ is_splitは、そのフレームの1投目のピン数の数字が丸(サーク�
             </div>
             <div class="ranking-score-box">
               <div class="ranking-main-score">${mainScoreFn(item)}</div>
-              <div class="ranking-sub-score">${subScoreFn(item)}</div>
+              ${sessionId ? '' : `<div class="ranking-sub-score">${subScoreFn(item)}</div>`}
             </div>
-            ${sessionId ? `<button class="btn btn-secondary btn-sm" style="margin-left:6px;" onclick="event.stopPropagation(); showGameDetail('${sessionId}')">📋</button>` : ''}
+            ${sessionId ? `<button class="ranking-detail-btn" onclick="event.stopPropagation(); showGameDetail('${sessionId}')" aria-label="スコア詳細">📋</button>` : ''}
           </div>
         `;
       }).join('');
