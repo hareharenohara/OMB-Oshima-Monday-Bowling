@@ -1,7 +1,7 @@
 // キャッシュのバージョン。index.html等を更新して公開する際は、
 // このバージョン文字列を必ず変更してください（古いキャッシュを破棄し、
 // ユーザー側に更新を届けるための仕組みです）。
-const CACHE_VERSION = 'omb-cache-v7';
+const CACHE_VERSION = 'omb-cache-v8';
 
 // アプリの外殻（起動に最低限必要なファイル）のみキャッシュ対象とする。
 // Supabaseへの通信やその他の外部APIはキャッシュしない（常に最新のデータを取得する）。
@@ -29,6 +29,7 @@ const APP_SHELL = [
   './icons/icon-512.png',
   './icons/icon-192-maskable.png',
   './icons/icon-512-maskable.png',
+  './icons/notification-badge.png',
   './icons/apple-touch-icon.png'
 ];
 
@@ -64,7 +65,7 @@ self.addEventListener('push', (event) => {
   event.waitUntil(self.registration.showNotification(payload.title, {
     body: payload.body,
     icon: './icons/icon-192.png',
-    badge: './icons/icon-192.png',
+    badge: './icons/notification-badge.png',
     data: { url: payload.url || './' },
     tag: payload.tag || 'omb-request',
   }));
