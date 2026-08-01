@@ -18,6 +18,7 @@ function renderDashboard() {
   const member = appData.members.find((m) => m.id === supabaseMemberId);
   const stats = appData.stats[supabaseMemberId];
   if (!member || !stats) return;
+  currentMyPageMemberId = supabaseMemberId;
 
   document.getElementById('dashboard-name').textContent = `${member.name}さん`;
   document.getElementById('dashboard-avatar').innerHTML = avatarInnerHtml(member.avatar, member.name.charAt(0));
@@ -53,7 +54,24 @@ function renderDashboard() {
   const avgRanking = computeRankings('all').avg || [];
   const rank = avgRanking.findIndex((r) => r.id === supabaseMemberId);
   document.getElementById('dashboard-ranking').textContent = rank >= 0 ? `${rank + 1}位` : '順位を見る';
+  renderDashboardAchievements(member, stats);
   if (isAdmin) refreshDashboardAdminSummary();
+}
+
+function renderDashboardAchievements(member, stats) {
+  const unlocked = checkAchievements(stats);
+  document.getElementById('dashboard-achievement-count').textContent = `${unlocked.length} / ${ACHIEVEMENTS.length}`;
+  const list = document.getElementById('dashboard-achievement-list');
+  if (!unlocked.length) {
+    list.innerHTML = '<span class="dashboard-achievement-empty">スコアを登録して実績を獲得しよう</span>';
+    return;
+  }
+  list.innerHTML = unlocked.map((id) => {
+    const achievement = ACHIEVEMENTS.find((a) => a.id === id);
+    if (!achievement) return '';
+    const equipped = member.equipped === id;
+    return `<button class="dashboard-achievement ${equipped ? 'equipped' : ''}" onclick="showAchievementDetail('${id}', true, ${equipped})" title="${escapeHtml(achievement.name)}"><span>${achievement.icon}</span><small>${escapeHtml(achievement.name)}</small></button>`;
+  }).join('');
 }
 
 function renderDashboardFrameChart(strike, spare, open) {

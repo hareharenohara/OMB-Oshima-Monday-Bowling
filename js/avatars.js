@@ -33,7 +33,7 @@
         if (!res.success) return;
         closeModal('modal-avatar-picker');
         fetchData(() => {
-          renderMyPageData();
+          renderDashboard();
         });
       });
     }
@@ -185,7 +185,7 @@
         if (!result.success) return;
         closeModal('modal-avatar-crop');
         fetchData(() => {
-          renderMyPageData();
+          renderDashboard();
         });
       }, 'image/jpeg', 0.88);
     }

@@ -52,7 +52,6 @@
     <button onclick="navigateTo('tab-ranking')">🏆 ランキング</button>
     <button onclick="navigateTo('tab-vault')">🎟️ 回数券残量・購入</button>
     <button onclick="navigateTo('tab-members')">👥 メンバー</button>
-    <button onclick="openMyOwnPage(); closeAppMenu();">👤 マイページ詳細</button>
     <div class="app-menu-admin admin-only">
       <button onclick="openApprovalCenter(); closeAppMenu();">📋 承認センター <span id="approval-center-badge" class="menu-count" style="display:none;"></span></button>
       <button onclick="navigateTo('tab-score')">📝 一括スコア入力</button>
@@ -81,25 +80,30 @@
       </section>
 
       <section class="dashboard-hero">
-        <div class="dashboard-user"><div id="dashboard-avatar" class="dashboard-avatar"></div><div><small>Welcome back</small><h2 id="dashboard-name">こんにちは</h2></div></div>
+        <div class="dashboard-user"><button id="dashboard-avatar" class="dashboard-avatar" onclick="showAvatarPicker()" title="プロフィール画像を変更"></button><div><small>Welcome back</small><h2 id="dashboard-name">こんにちは</h2><button class="dashboard-profile-edit" onclick="showAvatarPicker()">プロフィール画像を変更</button></div></div>
         <button class="dashboard-score-cta" onclick="openScoreRequestModal()"><span>🎳</span><span><b>スコアを入力する</b><small>結果を登録・申請</small></span><span>›</span></button>
       </section>
 
-      <section class="dashboard-card">
-        <div class="dashboard-card-title"><span><small>直近15G</small><b>アベレージ</b></span><span id="dashboard-avg-trend" class="trend-pill">—</span></div>
-        <div class="average-visual"><strong id="dashboard-recent-avg">—</strong><div><span>通算 <b id="dashboard-total-avg">—</b></span><div class="average-track"><i id="dashboard-average-bar"></i><em id="dashboard-average-marker"></em></div><small id="dashboard-average-message">データを集計中</small></div></div>
+      <section class="dashboard-card dashboard-performance">
+        <div class="dashboard-section-heading"><span><small>PERFORMANCE</small><b>直近15Gの成績</b></span></div>
+        <div class="dashboard-stat-section">
+          <div class="dashboard-card-title"><b>アベレージ</b><span id="dashboard-avg-trend" class="trend-pill">—</span></div>
+          <div class="average-visual"><strong id="dashboard-recent-avg">—</strong><div><span>通算 <b id="dashboard-total-avg">—</b></span><div class="average-track"><i id="dashboard-average-bar"></i><em id="dashboard-average-marker"></em></div><small id="dashboard-average-message">データを集計中</small></div></div>
+        </div>
+        <div class="dashboard-chart-grid dashboard-stat-section">
+          <div class="dashboard-stat-panel"><div class="dashboard-card-title"><b>フレーム結果</b></div><div class="dashboard-doughnut"><canvas id="dashboardFrameChart"></canvas><div><b id="dashboard-mark-rate">—</b><small>マーク率</small></div></div><div id="dashboard-frame-legend" class="dashboard-legend"></div></div>
+          <div class="dashboard-stat-panel"><div class="dashboard-card-title"><b>1球平均倒ピン数</b></div><div class="pin-average"><strong id="dashboard-fba">—</strong><span>本</span></div><div class="pin-track"><i id="dashboard-fba-bar"></i></div><div class="pin-scale"><span>0</span><span>10本</span></div></div>
+        </div>
+        <div class="dashboard-stat-section dashboard-score-section"><div class="dashboard-card-title"><b>スコア推移</b></div><div class="dashboard-score-chart"><canvas id="dashboardScoreChart"></canvas></div></div>
       </section>
-
-      <div class="dashboard-chart-grid">
-        <section class="dashboard-card"><div class="dashboard-card-title"><b>フレーム結果</b><small>直近15G</small></div><div class="dashboard-doughnut"><canvas id="dashboardFrameChart"></canvas><div><b id="dashboard-mark-rate">—</b><small>マーク率</small></div></div><div id="dashboard-frame-legend" class="dashboard-legend"></div></section>
-        <section class="dashboard-card"><div class="dashboard-card-title"><b>1球平均倒ピン数</b><small>直近15G</small></div><div class="pin-average"><strong id="dashboard-fba">—</strong><span>本</span></div><div class="pin-track"><i id="dashboard-fba-bar"></i></div><div class="pin-scale"><span>0</span><span>10本</span></div></section>
-      </div>
-
-      <section class="dashboard-card"><div class="dashboard-card-title"><b>スコア推移</b><small>直近15G</small></div><div class="dashboard-score-chart"><canvas id="dashboardScoreChart"></canvas></div></section>
       <div class="dashboard-link-grid">
         <button class="dashboard-link-card" onclick="navigateTo('tab-ranking')"><span class="link-icon gold">🏆</span><span><small>ランキング</small><b id="dashboard-ranking">順位を見る</b></span><span>›</span></button>
         <button class="dashboard-link-card" onclick="openTicketRequestModal()"><span class="link-icon blue">🎟️</span><span><small>回数券残量</small><b id="dashboard-ticket-balance">— G</b><em>購入申請</em></span><span>›</span></button>
       </div>
+      <section class="dashboard-card dashboard-achievements">
+        <div class="dashboard-card-title"><b>称号・実績</b><small id="dashboard-achievement-count">0 / 0</small></div>
+        <div id="dashboard-achievement-list" class="dashboard-achievement-list"></div>
+      </section>
       <button class="dashboard-members-link" onclick="navigateTo('tab-members')"><span>👥 メンバーを見る</span><span>›</span></button>
     </div>
 
