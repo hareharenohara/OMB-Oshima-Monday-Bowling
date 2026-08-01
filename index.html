@@ -85,8 +85,8 @@
         <button class="dashboard-score-cta" onclick="openScoreRequestModal()"><span class="score-cta-icon" aria-hidden="true"><i></i></span><span class="score-cta-copy"><small>NEW SCORE</small><b>スコアを入力する</b><em>結果票の読み取り・手入力</em></span><span class="score-cta-arrow">→</span></button>
       </section>
 
-      <section class="dashboard-card dashboard-performance">
-        <div class="dashboard-section-heading"><span><small>PERFORMANCE</small><b>直近15Gの成績</b></span></div>
+      <section class="dashboard-card dashboard-performance dashboard-performance-link" role="button" tabindex="0" aria-label="過去のスコア履歴を開く" onclick="openDashboardHistoryPopup()" onkeydown="if(event.key === 'Enter' || event.key === ' '){ event.preventDefault(); openDashboardHistoryPopup(); }">
+        <div class="dashboard-section-heading"><span><small>PERFORMANCE</small><b>直近15Gの成績</b></span><span class="dashboard-performance-more"><small>履歴を見る</small><em>›</em></span></div>
         <div class="dashboard-comparison-grid">
         <div class="dashboard-stat-section dashboard-compact-stat">
           <div class="dashboard-card-title"><b>アベレージ</b></div>
