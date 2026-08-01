@@ -116,9 +116,11 @@
           <div class="dashboard-card-title"><b>称号・実績</b><small id="dashboard-achievement-count">0 / 0</small></div>
           <div id="dashboard-achievement-summary" class="dashboard-achievement-summary"></div><span class="dashboard-card-more">一覧を開く ›</span>
         </button>
-        <button class="dashboard-card dashboard-member-card" onclick="navigateTo('tab-members')"><span class="dashboard-member-icon">👥</span><span><b>メンバー</b><small>一覧を見る</small></span><em>›</em></button>
       </div>
-      <section class="dashboard-card dashboard-history"><div class="dashboard-card-title"><b>過去のスコア履歴</b><small id="dashboard-history-count"></small></div><div id="dashboard-history-list"></div><button id="dashboard-history-more" class="dashboard-history-more" onclick="openDashboardHistoryPopup()">すべて見る</button></section>
+      <section class="dashboard-card dashboard-member-carousel-card">
+        <div class="dashboard-card-title dashboard-member-carousel-heading"><span><small>MEMBERS</small><b>メンバー</b></span><small>横にスワイプ</small></div>
+        <div id="dashboard-member-carousel" class="dashboard-member-carousel" aria-label="メンバー一覧"></div>
+      </section>
     </div>
 
     <!-- 1. スコア入力タブ -->
