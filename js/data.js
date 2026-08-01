@@ -333,5 +333,6 @@
       renderMembersTab();
       renderHistory();
       renderRanking();
+      renderDashboard();
     }
 

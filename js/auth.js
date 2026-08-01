@@ -206,8 +206,8 @@
         document.getElementById('loading').style.display = 'none';
         if (res.success) {
           appData = res;
-          document.getElementById('tab-score').style.display = 'block';
           renderAll();
+          navigateTo('tab-dashboard');
           if (onSuccessCallback) onSuccessCallback();
         } else {
           showToast(`データ取得に失敗しました: ${res.message || ''}`);

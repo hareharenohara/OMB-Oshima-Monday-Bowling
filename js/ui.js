@@ -4,9 +4,31 @@
     function switchTab(tabId) {
       document.querySelectorAll('.tab-content').forEach(el => el.style.display = 'none');
       document.getElementById(tabId).style.display = 'block';
-      document.querySelectorAll('.bottom-nav button').forEach(el => el.classList.remove('active'));
-      const activeBtn = document.getElementById(`tab-btn-${tabId.replace('tab-', '')}`);
-      if (activeBtn) activeBtn.classList.add('active');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    function navigateTo(tabId) {
+      switchTab(tabId);
+      closeAppMenu();
+      if (tabId === 'tab-dashboard') renderDashboard();
+    }
+
+    function toggleAppMenu() {
+      const menu = document.getElementById('app-menu');
+      const open = !menu.classList.contains('open');
+      menu.classList.toggle('open', open);
+      document.getElementById('menu-backdrop').classList.toggle('open', open);
+      menu.setAttribute('aria-hidden', String(!open));
+      document.querySelector('.menu-toggle').setAttribute('aria-expanded', String(open));
+    }
+
+    function closeAppMenu() {
+      const menu = document.getElementById('app-menu');
+      if (!menu) return;
+      menu.classList.remove('open');
+      document.getElementById('menu-backdrop').classList.remove('open');
+      menu.setAttribute('aria-hidden', 'true');
+      document.querySelector('.menu-toggle').setAttribute('aria-expanded', 'false');
     }
 
     function showModal(id) {

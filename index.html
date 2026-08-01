@@ -41,23 +41,66 @@
   <!-- ヘッダー -->
   <div class="header">
     <div class="header-title"><img src="images/header-logo.png" alt="OMB - Oshima Monday Bowling" style="height:96px; display:block;"></div>
-    <div style="display:flex; align-items:center; gap:8px;">
-      <button id="account-btn" class="btn btn-secondary btn-sm" onclick="openMyOwnPage()" title="マイページ" style="font-size:16px; padding:6px 10px;">👤</button>
-      <button class="btn btn-secondary btn-sm" onclick="openScoreRequestModal()" title="スコアを申請">🧾</button>
-      <button class="btn btn-secondary btn-sm" onclick="openTicketRequestModal()" title="回数券の購入・返還を申請">🎟️</button>
-      <button id="push-notification-btn" class="btn btn-secondary btn-sm" onclick="enablePushNotifications()" title="通知を有効にする">🔔</button>
-      <button class="btn btn-secondary btn-sm admin-only" onclick="openApprovalCenter()" title="承認センター" style="position:relative;">
-        📋<span id="approval-center-badge" style="display:none; position:absolute; top:-4px; right:-4px; background:#ef4444; color:#fff; border-radius:10px; font-size:10px; padding:1px 5px; line-height:1;"></span>
-      </button>
-      <button class="btn btn-secondary btn-sm admin-only" onclick="openAdminSettings()">⚙️</button>
-      <button class="btn btn-secondary btn-sm" onclick="handleSupabaseLogout()" title="ログアウト">🔓</button>
-    </div>
+    <button class="menu-toggle" onclick="toggleAppMenu()" aria-label="メニューを開く" aria-controls="app-menu" aria-expanded="false">☰</button>
   </div>
+
+  <div id="menu-backdrop" class="menu-backdrop" onclick="closeAppMenu()"></div>
+  <aside id="app-menu" class="app-menu" aria-hidden="true">
+    <div class="app-menu-header"><strong>メニュー</strong><button onclick="closeAppMenu()" aria-label="閉じる">×</button></div>
+    <button onclick="navigateTo('tab-dashboard')">🏠 ダッシュボード</button>
+    <button onclick="openScoreRequestModal(); closeAppMenu();">🎳 スコア入力</button>
+    <button onclick="navigateTo('tab-ranking')">🏆 ランキング</button>
+    <button onclick="navigateTo('tab-vault')">🎟️ 回数券残量・購入</button>
+    <button onclick="navigateTo('tab-members')">👥 メンバー</button>
+    <button onclick="openMyOwnPage(); closeAppMenu();">👤 マイページ詳細</button>
+    <div class="app-menu-admin admin-only">
+      <button onclick="openApprovalCenter(); closeAppMenu();">📋 承認センター <span id="approval-center-badge" class="menu-count" style="display:none;"></span></button>
+      <button onclick="navigateTo('tab-score')">📝 一括スコア入力</button>
+      <button onclick="openAdminSettings(); closeAppMenu();">⚙️ 管理設定</button>
+    </div>
+    <button id="push-notification-btn" onclick="enablePushNotifications(); closeAppMenu();">🔔 通知設定</button>
+    <button class="app-menu-logout" onclick="handleSupabaseLogout()">🚪 ログアウト</button>
+  </aside>
 
   <div class="container">
     <div id="loading">
       <div class="loading-spinner"></div>
       <div style="color: #ccc; font-size: 13px;">データを読み込んでいます...</div>
+    </div>
+
+    <div id="tab-dashboard" class="tab-content" style="display:none;">
+      <section class="dashboard-admin admin-only">
+        <button class="dashboard-admin-summary" onclick="toggleDashboardAdmin()" aria-expanded="false">
+          <span><b>管理メニュー</b><small id="dashboard-admin-summary">承認待ちを確認中...</small></span><span id="dashboard-admin-chevron">⌄</span>
+        </button>
+        <div id="dashboard-admin-body" class="dashboard-admin-body">
+          <button onclick="openApprovalCenter()"><span>📋 スコア・購入承認</span><b id="dashboard-pending-count">0件</b></button>
+          <button onclick="navigateTo('tab-vault')"><span>🎟️ 回数券残量管理</span><span>›</span></button>
+          <button onclick="navigateTo('tab-members')"><span>👥 メンバー残量一覧</span><span>›</span></button>
+        </div>
+      </section>
+
+      <section class="dashboard-hero">
+        <div class="dashboard-user"><div id="dashboard-avatar" class="dashboard-avatar"></div><div><small>Welcome back</small><h2 id="dashboard-name">こんにちは</h2></div></div>
+        <button class="dashboard-score-cta" onclick="openScoreRequestModal()"><span>🎳</span><span><b>スコアを入力する</b><small>結果を登録・申請</small></span><span>›</span></button>
+      </section>
+
+      <section class="dashboard-card">
+        <div class="dashboard-card-title"><span><small>直近15G</small><b>アベレージ</b></span><span id="dashboard-avg-trend" class="trend-pill">—</span></div>
+        <div class="average-visual"><strong id="dashboard-recent-avg">—</strong><div><span>通算 <b id="dashboard-total-avg">—</b></span><div class="average-track"><i id="dashboard-average-bar"></i><em id="dashboard-average-marker"></em></div><small id="dashboard-average-message">データを集計中</small></div></div>
+      </section>
+
+      <div class="dashboard-chart-grid">
+        <section class="dashboard-card"><div class="dashboard-card-title"><b>フレーム結果</b><small>直近15G</small></div><div class="dashboard-doughnut"><canvas id="dashboardFrameChart"></canvas><div><b id="dashboard-mark-rate">—</b><small>マーク率</small></div></div><div id="dashboard-frame-legend" class="dashboard-legend"></div></section>
+        <section class="dashboard-card"><div class="dashboard-card-title"><b>1球平均倒ピン数</b><small>直近15G</small></div><div class="pin-average"><strong id="dashboard-fba">—</strong><span>本</span></div><div class="pin-track"><i id="dashboard-fba-bar"></i></div><div class="pin-scale"><span>0</span><span>10本</span></div></section>
+      </div>
+
+      <section class="dashboard-card"><div class="dashboard-card-title"><b>スコア推移</b><small>直近15G</small></div><div class="dashboard-score-chart"><canvas id="dashboardScoreChart"></canvas></div></section>
+      <div class="dashboard-link-grid">
+        <button class="dashboard-link-card" onclick="navigateTo('tab-ranking')"><span class="link-icon gold">🏆</span><span><small>ランキング</small><b id="dashboard-ranking">順位を見る</b></span><span>›</span></button>
+        <button class="dashboard-link-card" onclick="openTicketRequestModal()"><span class="link-icon blue">🎟️</span><span><small>回数券残量</small><b id="dashboard-ticket-balance">— G</b><em>購入申請</em></span><span>›</span></button>
+      </div>
+      <button class="dashboard-members-link" onclick="navigateTo('tab-members')"><span>👥 メンバーを見る</span><span>›</span></button>
     </div>
 
     <!-- 1. スコア入力タブ -->
@@ -83,6 +126,12 @@
 
     <!-- 2. 回数券残量タブ（収支ダッシュボード付き） -->
     <div id="tab-vault" class="tab-content" style="display: none;">
+      <div class="card vault-personal-card">
+        <small style="color:#94a3b8;">あなたの回数券残量</small>
+        <div id="vault-my-balance" style="font-size:34px;font-weight:bold;margin:8px 0 14px;color:#38bdf8;">— G</div>
+        <button class="btn btn-primary btn-block" onclick="openTicketRequestModal()">回数券を購入申請する</button>
+      </div>
+      <div class="admin-only">
       <div class="card">
         <h4 style="margin: 0 0 8px 0; color: #38bdf8;">🎟️ 回数券 収支ダッシュボード</h4>
         <div class="balance-grid">
@@ -124,6 +173,7 @@
         <h4 style="margin: 0 0 8px 0;">📋 回数券 入出履歴 (月別)</h4>
         <p style="font-size:11px; color:#888; margin:-4px 0 8px 0;">🟢 入り＝回数券購入 🔴 出＝その日の消化ゲーム数</p>
         <div id="vault-accordion-container"></div>
+      </div>
       </div>
     </div>
 
@@ -217,22 +267,6 @@
     <div id="tab-members" class="tab-content" style="display: none;">
       <div class="card" id="member-management-list"></div>
     </div>
-  </div>
-
-  <!-- 下部固定ナビゲーション -->
-  <div class="bottom-nav">
-    <button id="tab-btn-score" class="active" onclick="switchTab('tab-score')">
-      <span class="nav-icon">📝</span><span>スコア入力</span>
-    </button>
-    <button id="tab-btn-ranking" onclick="switchTab('tab-ranking')">
-      <span class="nav-icon">🏆</span><span>ランキング</span>
-    </button>
-    <button id="tab-btn-vault" onclick="switchTab('tab-vault')">
-      <span class="nav-icon">🎟️</span><span>回数券残量</span>
-    </button>
-    <button id="tab-btn-members" class="admin-only" onclick="switchTab('tab-members')">
-      <span class="nav-icon">👥</span><span>メンバー</span>
-    </button>
   </div>
 
   <div id="toast-container"></div>
@@ -688,6 +722,7 @@
   <script src="js/achievements.js"></script>
   <script src="js/avatars.js"></script>
   <script src="js/ui.js"></script>
+  <script src="js/dashboard.js"></script>
   <script src="js/service-worker-registration.js"></script>
 </body>
 </html>

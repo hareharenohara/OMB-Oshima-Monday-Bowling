@@ -3,7 +3,7 @@
        --------------------------------------------------------- */
     function renderMembersTab() {
       const container = document.getElementById('member-management-list');
-      container.innerHTML = '<h4 style="margin:0 0 10px 0;">👥 メンバー管理 (管理者限定)</h4>';
+      container.innerHTML = '<h4 style="margin:0 0 4px 0;">👥 メンバー</h4><p style="font-size:12px;color:#888;margin:0 0 10px;">メンバーを選ぶと個人成績を確認できます。</p>';
       appData.members.forEach(m => {
         const stats = appData.stats[m.id];
         const badgeClass = stats.remainingGames <= 3 ? 'badge-red' : 'badge-green';
@@ -12,7 +12,8 @@
           <div style="display:flex; justify-content:space-between; padding:10px 0; border-bottom:1px solid #2d2d2d; align-items:center;">
             <div>
               <strong style="font-size:14px;">${escapeHtml(m.name)}</strong><br>
-              <span class="badge ${badgeClass}">残り ${stats.remainingGames} G</span>
+              <span style="font-size:12px;color:#94a3b8;">通算Avg ${stats.totalAvg.toFixed(1)}</span>
+              <span class="badge ${badgeClass} admin-only">残り ${stats.remainingGames} G</span>
             </div>
             <div style="display:flex; gap:4px;">
               <button class="btn btn-primary btn-sm" onclick="showMyPage('${m.id}')">詳細</button>

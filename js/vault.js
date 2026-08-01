@@ -2,6 +2,9 @@
        ② 回数券残量画面
        --------------------------------------------------------- */
     function renderVault() {
+      const ownStats = appData.stats[supabaseMemberId];
+      const ownBalance = document.getElementById('vault-my-balance');
+      if (ownBalance) ownBalance.innerText = ownStats ? `${ownStats.remainingGames} G` : '— G';
       document.getElementById('vault-in').innerText = `${appData.vault.totalInGames} G`;
       document.getElementById('vault-out').innerText = `${appData.vault.totalOutGames} G`;
       document.getElementById('vault-games').innerText = `${appData.vault.totalPoolGames} G`;

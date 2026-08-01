@@ -378,5 +378,6 @@
       } else {
         badge.style.display = 'none';
       }
+      if (typeof refreshDashboardAdminSummary === 'function') refreshDashboardAdminSummary();
     }
 
