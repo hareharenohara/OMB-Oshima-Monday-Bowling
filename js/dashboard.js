@@ -1,6 +1,24 @@
 let dashboardFrameChartInstance = null;
 let dashboardScoreChartInstance = null;
 let dashboardHistoryExpanded = false;
+let dashboardViewedMemberId = null;
+
+function getDashboardMemberId() {
+  return dashboardViewedMemberId || supabaseMemberId;
+}
+
+function openMemberDashboard(memberId) {
+  dashboardViewedMemberId = memberId;
+  dashboardHistoryExpanded = false;
+  switchTab('tab-dashboard');
+  closeAppMenu();
+  renderDashboard();
+}
+
+function openDashboardAvatarPicker() {
+  if (getDashboardMemberId() !== supabaseMemberId) return;
+  showAvatarPicker();
+}
 
 function getRecentDashboardGames(memberId) {
   const games = [];
@@ -16,16 +34,29 @@ function getRecentDashboardGames(memberId) {
 
 function renderDashboard() {
   if (!supabaseMemberId || !appData.members || !appData.stats) return;
-  const member = appData.members.find((m) => m.id === supabaseMemberId);
-  const stats = appData.stats[supabaseMemberId];
+  const memberId = getDashboardMemberId();
+  const member = appData.members.find((m) => m.id === memberId);
+  const stats = appData.stats[memberId];
   if (!member || !stats) return;
-  currentMyPageMemberId = supabaseMemberId;
+  const isOwnDashboard = memberId === supabaseMemberId;
+  currentMyPageMemberId = memberId;
+  const dashboard = document.getElementById('tab-dashboard');
+  dashboard.classList.toggle('member-dashboard', !isOwnDashboard);
+  document.getElementById('dashboard-viewing-name').textContent = member.name;
+  document.getElementById('dashboard-welcome-label').textContent = isOwnDashboard ? 'Welcome back' : 'MEMBER PERFORMANCE';
+  const avatarButton = document.getElementById('dashboard-avatar');
+  avatarButton.disabled = !isOwnDashboard;
+  avatarButton.title = isOwnDashboard ? 'プロフィール画像を変更' : '';
+  const equippedBadge = document.getElementById('dashboard-equipped-badge');
+  const equippedIcon = getAchievementIcon(member.equipped);
+  equippedBadge.textContent = equippedIcon;
+  equippedBadge.classList.toggle('visible', !!equippedIcon);
 
   document.getElementById('dashboard-name').textContent = `${member.name}さん`;
   document.getElementById('dashboard-avatar').innerHTML = avatarInnerHtml(member.avatar, member.name.charAt(0));
-  document.getElementById('dashboard-ticket-balance').textContent = `${stats.remainingGames} G`;
+  document.getElementById('dashboard-ticket-balance').textContent = isOwnDashboard ? `${stats.remainingGames} G` : '—';
 
-  const recent = getRecentDashboardGames(supabaseMemberId);
+  const recent = getRecentDashboardGames(memberId);
   const recentAvg = recent.length ? recent.reduce((sum, g) => sum + Number(g.score || 0), 0) / recent.length : 0;
   const difference = recentAvg - stats.totalAvg;
   const trend = document.getElementById('dashboard-avg-trend');
@@ -38,15 +69,15 @@ function renderDashboard() {
   document.getElementById('dashboard-average-message').textContent = !recent.length ? 'スコアデータがありません' : difference >= 0 ? `通算より ${difference.toFixed(1)} 高いペース` : `通算より ${Math.abs(difference).toFixed(1)} 低いペース`;
 
   const frameStats = computeAdvancedFrameStats(recent.map((g) => ({ games: [g] })));
-  const allAttendance = appData.attendance.filter((a) => a.memberId === supabaseMemberId);
+  const allAttendance = appData.attendance.filter((a) => a.memberId === memberId);
   const totalFrameStats = computeAdvancedFrameStats(allAttendance);
   const strike = frameStats.strikeRate || 0;
   const spare = Math.max(0, (frameStats.markRate || 0) - strike);
   const open = frameStats.openFrameRate || 0;
   document.getElementById('dashboard-mark-rate').textContent = frameStats.markRate == null ? '—' : `${frameStats.markRate.toFixed(1)}%`;
   document.getElementById('dashboard-frame-legend').innerHTML = [
-    ['#38bdf8', 'ストライク', strike], ['#a78bfa', 'スペア', spare], ['#f97316', 'オープン', open]
-  ].map(([color, label, value]) => `<span><i style="background:${color}"></i>${label}<b>${Number(value).toFixed(1)}%</b></span>`).join('');
+    ['#0072B2', 'ストライク', strike], ['#F0E442', 'スペア', spare], ['#D55E00', 'オープン', open]
+  ].map(([color, label, value]) => `<span><i style="background:${color}"></i><em>${label}</em><b>${Number(value).toFixed(1)}%</b></span>`).join('');
   renderDashboardFrameChart(strike, spare, open);
 
   const fba = frameStats.firstBallAvg;
@@ -65,7 +96,7 @@ function renderDashboard() {
   setDashboardComparison('dashboard-high', recentHigh, stats.highScore || null, '点');
   renderDashboardScoreChart();
 
-  renderDashboardMedals();
+  renderDashboardMedals(memberId);
   renderDashboardAchievements(member, stats);
   renderDashboardHistory();
   if (isAdmin) refreshDashboardAdminSummary();
@@ -86,11 +117,11 @@ function setDashboardComparison(prefix, recent, total, unit) {
   message.textContent = `通算より ${Math.abs(difference).toFixed(1)}${unit} ${difference >= 0 ? '高い' : '低い'}`;
 }
 
-function renderDashboardMedals() {
+function renderDashboardMedals(memberId) {
   const rankings = computeRankings('month');
   const counts = [0, 0, 0];
   Object.keys(RANKING_CATEGORY_LABELS).forEach((key) => {
-    const index = (rankings[key] || []).findIndex((item) => item.id === supabaseMemberId);
+    const index = (rankings[key] || []).findIndex((item) => item.id === memberId);
     if (index >= 0 && index < 3) counts[index]++;
   });
   const medals = [];
@@ -112,8 +143,9 @@ function renderDashboardAchievements(member, stats) {
 }
 
 function openDashboardAchievements() {
-  const member = appData.members.find((m) => m.id === supabaseMemberId);
-  const stats = appData.stats[supabaseMemberId];
+  const memberId = getDashboardMemberId();
+  const member = appData.members.find((m) => m.id === memberId);
+  const stats = appData.stats[memberId];
   const unlocked = checkAchievements(stats);
   document.getElementById('dashboard-achievements-note').textContent = `獲得済み ${unlocked.length} / ${ACHIEVEMENTS.length}　称号をタップすると詳細を確認・装備できます。`;
   document.getElementById('dashboard-achievements-grid').innerHTML = ACHIEVEMENTS.map((achievement) => {
@@ -131,7 +163,7 @@ function renderDashboardFrameChart(strike, spare, open) {
   const hasData = strike + spare + open > 0;
   dashboardFrameChartInstance = new Chart(canvas, {
     type: 'doughnut',
-    data: { datasets: [{ data: hasData ? [strike, spare, open] : [1], backgroundColor: hasData ? ['#38bdf8', '#a78bfa', '#f97316'] : ['#334155'], borderWidth: 0 }] },
+    data: { datasets: [{ data: hasData ? [strike, spare, open] : [1], backgroundColor: hasData ? ['#0072B2', '#F0E442', '#D55E00'] : ['#334155'], borderColor: '#182233', borderWidth: hasData ? 3 : 0, hoverOffset: 3 }] },
     options: { responsive: true, maintainAspectRatio: false, cutout: '72%', plugins: { legend: { display: false }, tooltip: { enabled: hasData } } }
   });
 }
@@ -142,7 +174,7 @@ function renderDashboardScoreChart() {
   const unitSelect = document.getElementById('dashboard-chart-unit');
   const unit = unitSelect ? unitSelect.value : 'day';
   const grouped = {};
-  appData.attendance.filter((a) => a.memberId === supabaseMemberId).forEach((attendance) => {
+  appData.attendance.filter((a) => a.memberId === getDashboardMemberId()).forEach((attendance) => {
     let key = attendance.date;
     if (unit === 'month') key = attendance.date.slice(0, 7);
     if (unit === 'year') key = attendance.date.slice(0, 4);
@@ -165,7 +197,7 @@ function renderDashboardScoreChart() {
 }
 
 function renderDashboardHistory() {
-  const attendance = appData.attendance.filter((a) => a.memberId === supabaseMemberId).sort((a, b) => b.date.localeCompare(a.date));
+  const attendance = appData.attendance.filter((a) => a.memberId === getDashboardMemberId()).sort((a, b) => b.date.localeCompare(a.date));
   const visible = dashboardHistoryExpanded ? attendance : attendance.slice(0, 3);
   document.getElementById('dashboard-history-count').textContent = `${attendance.length}件`;
   document.getElementById('dashboard-history-list').innerHTML = visible.length ? visible.map((item) => {
@@ -200,7 +232,7 @@ function clearDashboardScoreDetailFilter() {
 function renderDashboardScoreDetail() {
   const start = document.getElementById('dashboard-detail-start').value;
   const end = document.getElementById('dashboard-detail-end').value;
-  let attendance = appData.attendance.filter((a) => a.memberId === supabaseMemberId);
+  let attendance = appData.attendance.filter((a) => a.memberId === getDashboardMemberId());
   if (start) attendance = attendance.filter((a) => a.date >= start);
   if (end) attendance = attendance.filter((a) => a.date <= end);
   const games = attendance.flatMap((a) => a.games || []).filter((g) => g.score != null);

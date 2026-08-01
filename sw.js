@@ -1,7 +1,7 @@
 // キャッシュのバージョン。index.html等を更新して公開する際は、
 // このバージョン文字列を必ず変更してください（古いキャッシュを破棄し、
 // ユーザー側に更新を届けるための仕組みです）。
-const CACHE_VERSION = 'omb-cache-v14-comparison-layout';
+const CACHE_VERSION = 'omb-cache-v21-dark-profile-badge';
 
 // アプリの外殻（起動に最低限必要なファイル）のみキャッシュ対象とする。
 // Supabaseへの通信やその他の外部APIはキャッシュしない（常に最新のデータを取得する）。

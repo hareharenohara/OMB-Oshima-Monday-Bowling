@@ -16,7 +16,7 @@
               <span class="badge ${badgeClass} admin-only">残り ${stats.remainingGames} G</span>
             </div>
             <div style="display:flex; gap:4px;">
-              <button class="btn btn-primary btn-sm" onclick="showMyPage('${m.id}')">詳細</button>
+              <button class="btn btn-primary btn-sm" onclick="openMemberDashboard('${m.id}')">詳細</button>
               <button class="btn btn-success btn-sm admin-only" onclick="showChargeModal('', '${m.id}', '${m.name}')">回数券+</button>
               <button class="btn btn-secondary btn-sm admin-only" onclick="showEditMemberModal('${m.id}', '${m.name}')">編集</button>
             </div>

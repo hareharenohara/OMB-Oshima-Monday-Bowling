@@ -68,6 +68,7 @@
     </div>
 
     <div id="tab-dashboard" class="tab-content" style="display:none;">
+      <div id="dashboard-viewing-banner" class="dashboard-viewing-banner"><span>👤 <b id="dashboard-viewing-name"></b>さんのダッシュボード</span><button onclick="navigateTo('tab-members')">メンバー一覧へ戻る</button></div>
       <section class="dashboard-admin admin-only">
         <button class="dashboard-admin-summary" onclick="toggleDashboardAdmin()" aria-expanded="false">
           <span><b>管理メニュー</b><small id="dashboard-admin-summary">承認待ちを確認中...</small></span><span id="dashboard-admin-chevron">⌄</span>
@@ -80,8 +81,8 @@
       </section>
 
       <section class="dashboard-hero">
-        <div class="dashboard-user"><button id="dashboard-avatar" class="dashboard-avatar" onclick="showAvatarPicker()" title="プロフィール画像を変更"></button><div><small>Welcome back</small><h2 id="dashboard-name">こんにちは</h2><button class="dashboard-profile-edit" onclick="showAvatarPicker()">プロフィール画像を変更</button></div></div>
-        <button class="dashboard-score-cta" onclick="openScoreRequestModal()"><span>🎳</span><span><b>スコアを入力する</b><small>結果を登録・申請</small></span><span>›</span></button>
+        <div class="dashboard-user"><div class="dashboard-avatar-wrap"><button id="dashboard-avatar" class="dashboard-avatar" onclick="openDashboardAvatarPicker()" title="プロフィール画像を変更"></button><span id="dashboard-equipped-badge" class="dashboard-equipped-badge"></span></div><div><small id="dashboard-welcome-label">Welcome back</small><h2 id="dashboard-name">こんにちは</h2></div></div>
+        <button class="dashboard-score-cta" onclick="openScoreRequestModal()"><span class="score-cta-icon" aria-hidden="true"><i></i></span><span class="score-cta-copy"><small>NEW SCORE</small><b>スコアを入力する</b><em>結果票の読み取り・手入力</em></span><span class="score-cta-arrow">→</span></button>
       </section>
 
       <section class="dashboard-card dashboard-performance">
@@ -110,12 +111,14 @@
         <button class="dashboard-link-card dashboard-ranking-card" onclick="navigateTo('tab-ranking')"><span class="link-icon gold">🏆</span><span><small>今月のメダル</small><b id="dashboard-ranking">—</b><em>ランキングを見る</em></span><span>›</span></button>
         <button class="dashboard-link-card dashboard-ticket-card" onclick="openTicketRequestModal()"><span class="link-icon blue">🎟️</span><span><small>回数券残量</small><b id="dashboard-ticket-balance">— G</b><em>購入申請</em></span><span>›</span></button>
       </div>
-      <button class="dashboard-card dashboard-achievements dashboard-popup-card" onclick="openDashboardAchievements()">
-        <div class="dashboard-card-title"><b>称号・実績</b><small id="dashboard-achievement-count">0 / 0</small></div>
-        <div id="dashboard-achievement-summary" class="dashboard-achievement-summary"></div><span class="dashboard-card-more">一覧を開く ›</span>
-      </button>
+      <div class="dashboard-secondary-grid">
+        <button class="dashboard-card dashboard-achievements dashboard-popup-card" onclick="openDashboardAchievements()">
+          <div class="dashboard-card-title"><b>称号・実績</b><small id="dashboard-achievement-count">0 / 0</small></div>
+          <div id="dashboard-achievement-summary" class="dashboard-achievement-summary"></div><span class="dashboard-card-more">一覧を開く ›</span>
+        </button>
+        <button class="dashboard-card dashboard-member-card" onclick="navigateTo('tab-members')"><span class="dashboard-member-icon">👥</span><span><b>メンバー</b><small>一覧を見る</small></span><em>›</em></button>
+      </div>
       <section class="dashboard-card dashboard-history"><div class="dashboard-card-title"><b>過去のスコア履歴</b><small id="dashboard-history-count"></small></div><div id="dashboard-history-list"></div><button id="dashboard-history-more" class="dashboard-history-more" onclick="toggleDashboardHistory()">もっと見る</button></section>
-      <button class="dashboard-members-link" onclick="navigateTo('tab-members')"><span>👥 メンバーを見る</span><span>›</span></button>
     </div>
 
     <!-- 1. スコア入力タブ -->

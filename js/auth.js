@@ -75,7 +75,7 @@
 
     function openMyOwnPage() {
       if (!supabaseMemberId) return;
-      showMyPage(supabaseMemberId);
+      navigateTo('tab-dashboard');
     }
 
     function renderAccountButton() {

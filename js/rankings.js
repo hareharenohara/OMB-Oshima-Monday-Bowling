@@ -252,7 +252,7 @@
         const sessionId = sessionIdFn ? sessionIdFn(item) : null;
 
         return `
-          <div class="ranking-item ${rankClass}" onclick="showMyPage('${item.id}')" style="cursor:pointer;">
+          <div class="ranking-item ${rankClass}" onclick="openMemberDashboard('${item.id}')" style="cursor:pointer;">
             <div class="ranking-user">
               <span class="rank-badge">${badgeContent}</span>
               <div class="avatar-wrapper ranking">

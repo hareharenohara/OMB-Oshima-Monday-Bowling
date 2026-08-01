@@ -62,7 +62,7 @@
             </label>
             <div style="display:flex; align-items:center; gap:6px;">
               <span class="badge ${badgeClass}">残 ${stats.remainingGames} G</span>
-              <button class="btn btn-secondary btn-sm" onclick="showMyPage('${member.id}')">詳細</button>
+              <button class="btn btn-secondary btn-sm" onclick="openMemberDashboard('${member.id}')">詳細</button>
             </div>
           </div>
           <div class="score-card-body" id="input-area-${member.id}">

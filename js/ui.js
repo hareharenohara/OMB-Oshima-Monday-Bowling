@@ -8,6 +8,7 @@
     }
 
     function navigateTo(tabId) {
+      if (tabId === 'tab-dashboard') dashboardViewedMemberId = null;
       switchTab(tabId);
       closeAppMenu();
       if (tabId === 'tab-dashboard') renderDashboard();
