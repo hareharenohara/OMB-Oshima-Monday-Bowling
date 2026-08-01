@@ -138,6 +138,7 @@
         if (!res.success) return;
         closeModal('modal-achievement-detail');
         closeModal('modal-mypage');
+        closeModal('modal-dashboard-achievements');
         fetchData();
       });
     }

@@ -40,7 +40,7 @@
 
   <!-- ヘッダー -->
   <div class="header">
-    <div class="header-title"><img src="images/header-logo.png" alt="OMB - Oshima Monday Bowling" style="height:96px; display:block;"></div>
+    <button class="header-title header-home" onclick="navigateTo('tab-dashboard')" aria-label="ダッシュボードへ戻る"><img src="images/header-logo.png" alt="OMB - Oshima Monday Bowling" style="height:96px; display:block;"></button>
     <button class="menu-toggle" onclick="toggleAppMenu()" aria-label="メニューを開く" aria-controls="app-menu" aria-expanded="false">☰</button>
   </div>
 
@@ -86,24 +86,35 @@
 
       <section class="dashboard-card dashboard-performance">
         <div class="dashboard-section-heading"><span><small>PERFORMANCE</small><b>直近15Gの成績</b></span></div>
-        <div class="dashboard-stat-section">
-          <div class="dashboard-card-title"><b>アベレージ</b><span id="dashboard-avg-trend" class="trend-pill">—</span></div>
-          <div class="average-visual"><strong id="dashboard-recent-avg">—</strong><div><span>通算 <b id="dashboard-total-avg">—</b></span><div class="average-track"><i id="dashboard-average-bar"></i><em id="dashboard-average-marker"></em></div><small id="dashboard-average-message">データを集計中</small></div></div>
+        <div class="dashboard-comparison-grid">
+        <div class="dashboard-stat-section dashboard-compact-stat">
+          <div class="dashboard-card-title"><b>アベレージ</b></div>
+          <div class="average-visual"><div class="dashboard-current-value"><strong id="dashboard-recent-avg">—</strong><span id="dashboard-avg-trend" class="trend-pill">—</span></div><div class="dashboard-comparison-detail"><span>通算 <b id="dashboard-total-avg">—</b></span><div class="average-track"><i id="dashboard-average-bar"></i><em id="dashboard-average-marker"></em></div><small id="dashboard-average-message">データを集計中</small></div></div>
         </div>
-        <div class="dashboard-chart-grid dashboard-stat-section">
-          <div class="dashboard-stat-panel"><div class="dashboard-card-title"><b>フレーム結果</b></div><div class="dashboard-doughnut"><canvas id="dashboardFrameChart"></canvas><div><b id="dashboard-mark-rate">—</b><small>マーク率</small></div></div><div id="dashboard-frame-legend" class="dashboard-legend"></div></div>
-          <div class="dashboard-stat-panel"><div class="dashboard-card-title"><b>1球平均倒ピン数</b></div><div class="pin-average"><strong id="dashboard-fba">—</strong><span>本</span></div><div class="pin-track"><i id="dashboard-fba-bar"></i></div><div class="pin-scale"><span>0</span><span>10本</span></div></div>
+        <div class="dashboard-stat-section dashboard-compact-stat">
+          <div class="dashboard-card-title"><b>1投目平均倒ピン数</b></div>
+          <div class="average-visual"><div class="dashboard-current-value"><strong id="dashboard-fba">—</strong><span id="dashboard-fba-trend" class="trend-pill">—</span></div><div class="dashboard-comparison-detail"><span>通算 <b id="dashboard-fba-total">—</b> 本</span><div class="average-track purple"><i id="dashboard-fba-bar"></i><em id="dashboard-fba-marker"></em></div><small id="dashboard-fba-message">データを集計中</small></div></div>
         </div>
-        <div class="dashboard-stat-section dashboard-score-section"><div class="dashboard-card-title"><b>スコア推移</b></div><div class="dashboard-score-chart"><canvas id="dashboardScoreChart"></canvas></div></div>
+        <div class="dashboard-stat-section dashboard-compact-stat">
+          <div class="dashboard-card-title"><b>ハイスコア</b></div>
+          <div class="average-visual"><div class="dashboard-current-value"><strong id="dashboard-high-recent">—</strong><span id="dashboard-high-trend" class="trend-pill">—</span></div><div class="dashboard-comparison-detail"><span>通算 <b id="dashboard-high-total">—</b> 点</span><div class="average-track orange"><i id="dashboard-high-bar"></i><em id="dashboard-high-marker"></em></div><small id="dashboard-high-message">データを集計中</small></div></div>
+        </div>
+        </div>
+        <div class="dashboard-stat-section"><div class="dashboard-card-title"><b>フレーム結果</b><small>直近15G</small></div><div class="dashboard-frame-layout"><div class="dashboard-doughnut"><canvas id="dashboardFrameChart"></canvas><div><b id="dashboard-mark-rate">—</b><small>マーク率</small></div></div><div id="dashboard-frame-legend" class="dashboard-legend"></div></div></div>
+      </section>
+      <section class="dashboard-card dashboard-score-card">
+        <div class="dashboard-card-title"><b>スコア推移</b><select id="dashboard-chart-unit" onchange="renderDashboardScoreChart()"><option value="day">日単位</option><option value="month">月単位</option><option value="quarter">四半期単位</option><option value="year">年単位</option></select></div>
+        <button class="dashboard-chart-open" onclick="openDashboardScoreDetail()" title="スコア詳細を開く"><div class="dashboard-score-chart"><canvas id="dashboardScoreChart"></canvas></div><small>グラフをタップしてスコア詳細を表示</small></button>
       </section>
       <div class="dashboard-link-grid">
-        <button class="dashboard-link-card" onclick="navigateTo('tab-ranking')"><span class="link-icon gold">🏆</span><span><small>ランキング</small><b id="dashboard-ranking">順位を見る</b></span><span>›</span></button>
-        <button class="dashboard-link-card" onclick="openTicketRequestModal()"><span class="link-icon blue">🎟️</span><span><small>回数券残量</small><b id="dashboard-ticket-balance">— G</b><em>購入申請</em></span><span>›</span></button>
+        <button class="dashboard-link-card dashboard-ranking-card" onclick="navigateTo('tab-ranking')"><span class="link-icon gold">🏆</span><span><small>今月のメダル</small><b id="dashboard-ranking">—</b><em>ランキングを見る</em></span><span>›</span></button>
+        <button class="dashboard-link-card dashboard-ticket-card" onclick="openTicketRequestModal()"><span class="link-icon blue">🎟️</span><span><small>回数券残量</small><b id="dashboard-ticket-balance">— G</b><em>購入申請</em></span><span>›</span></button>
       </div>
-      <section class="dashboard-card dashboard-achievements">
+      <button class="dashboard-card dashboard-achievements dashboard-popup-card" onclick="openDashboardAchievements()">
         <div class="dashboard-card-title"><b>称号・実績</b><small id="dashboard-achievement-count">0 / 0</small></div>
-        <div id="dashboard-achievement-list" class="dashboard-achievement-list"></div>
-      </section>
+        <div id="dashboard-achievement-summary" class="dashboard-achievement-summary"></div><span class="dashboard-card-more">一覧を開く ›</span>
+      </button>
+      <section class="dashboard-card dashboard-history"><div class="dashboard-card-title"><b>過去のスコア履歴</b><small id="dashboard-history-count"></small></div><div id="dashboard-history-list"></div><button id="dashboard-history-more" class="dashboard-history-more" onclick="toggleDashboardHistory()">もっと見る</button></section>
       <button class="dashboard-members-link" onclick="navigateTo('tab-members')"><span>👥 メンバーを見る</span><span>›</span></button>
     </div>
 
@@ -711,6 +722,23 @@
         <button class="btn btn-secondary" onclick="closeModal('modal-achievement-detail')">閉じる</button>
         <button id="ach-equip-btn" class="btn btn-success" style="display:none;" onclick="equipCurrentAchievement()">この称号を装備する</button>
       </div>
+    </div>
+  </div>
+
+  <div id="modal-dashboard-achievements" class="modal">
+    <div class="modal-content">
+      <div class="modal-heading-row"><h3>🏆 称号・実績</h3><button class="modal-close-x" onclick="closeModal('modal-dashboard-achievements')">×</button></div>
+      <p id="dashboard-achievements-note" class="modal-note"></p>
+      <div id="dashboard-achievements-grid" class="achievement-grid"></div>
+    </div>
+  </div>
+
+  <div id="modal-dashboard-score-detail" class="modal">
+    <div class="modal-content">
+      <div class="modal-heading-row"><h3>📈 スコア詳細</h3><button class="modal-close-x" onclick="closeModal('modal-dashboard-score-detail')">×</button></div>
+      <div class="dashboard-detail-filter"><label>開始日<input type="date" id="dashboard-detail-start" onchange="renderDashboardScoreDetail()"></label><span>～</span><label>終了日<input type="date" id="dashboard-detail-end" onchange="renderDashboardScoreDetail()"></label><button class="btn btn-secondary btn-sm" onclick="clearDashboardScoreDetailFilter()">クリア</button></div>
+      <div class="dashboard-detail-summary"><div><small>期間内アベレージ</small><b id="dashboard-detail-avg">—</b></div><div><small>最高スコア</small><b id="dashboard-detail-high">—</b></div><div><small>ゲーム数</small><b id="dashboard-detail-games">—</b></div></div>
+      <div class="dashboard-detail-stats"><h4>投球詳細統計</h4><div id="dashboard-detail-stats"></div></div>
     </div>
   </div>
 

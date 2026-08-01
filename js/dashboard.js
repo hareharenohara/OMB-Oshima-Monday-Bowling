@@ -1,5 +1,6 @@
 let dashboardFrameChartInstance = null;
 let dashboardScoreChartInstance = null;
+let dashboardHistoryExpanded = false;
 
 function getRecentDashboardGames(memberId) {
   const games = [];
@@ -37,6 +38,8 @@ function renderDashboard() {
   document.getElementById('dashboard-average-message').textContent = !recent.length ? 'スコアデータがありません' : difference >= 0 ? `通算より ${difference.toFixed(1)} 高いペース` : `通算より ${Math.abs(difference).toFixed(1)} 低いペース`;
 
   const frameStats = computeAdvancedFrameStats(recent.map((g) => ({ games: [g] })));
+  const allAttendance = appData.attendance.filter((a) => a.memberId === supabaseMemberId);
+  const totalFrameStats = computeAdvancedFrameStats(allAttendance);
   const strike = frameStats.strikeRate || 0;
   const spare = Math.max(0, (frameStats.markRate || 0) - strike);
   const open = frameStats.openFrameRate || 0;
@@ -49,29 +52,76 @@ function renderDashboard() {
   const fba = frameStats.firstBallAvg;
   document.getElementById('dashboard-fba').textContent = fba == null ? '—' : fba.toFixed(1);
   document.getElementById('dashboard-fba-bar').style.width = `${fba == null ? 0 : Math.min(100, fba * 10)}%`;
-  renderDashboardScoreChart(recent);
+  const totalFba = totalFrameStats.firstBallAvg;
+  document.getElementById('dashboard-fba-total').textContent = totalFba == null ? '—' : totalFba.toFixed(1);
+  document.getElementById('dashboard-fba-marker').style.left = `${totalFba == null ? 0 : Math.min(100, totalFba * 10)}%`;
+  setDashboardComparison('dashboard-fba', fba, totalFba, '本');
 
-  const avgRanking = computeRankings('all').avg || [];
-  const rank = avgRanking.findIndex((r) => r.id === supabaseMemberId);
-  document.getElementById('dashboard-ranking').textContent = rank >= 0 ? `${rank + 1}位` : '順位を見る';
+  const recentHigh = recent.length ? Math.max(...recent.map((g) => Number(g.score || 0))) : null;
+  document.getElementById('dashboard-high-recent').textContent = recentHigh == null ? '—' : recentHigh;
+  document.getElementById('dashboard-high-total').textContent = stats.highScore || '—';
+  document.getElementById('dashboard-high-bar').style.width = `${recentHigh == null ? 0 : Math.min(100, recentHigh / 300 * 100)}%`;
+  document.getElementById('dashboard-high-marker').style.left = `${Math.min(100, (stats.highScore || 0) / 300 * 100)}%`;
+  setDashboardComparison('dashboard-high', recentHigh, stats.highScore || null, '点');
+  renderDashboardScoreChart();
+
+  renderDashboardMedals();
   renderDashboardAchievements(member, stats);
+  renderDashboardHistory();
   if (isAdmin) refreshDashboardAdminSummary();
+}
+
+function setDashboardComparison(prefix, recent, total, unit) {
+  const trend = document.getElementById(`${prefix}-trend`);
+  const message = document.getElementById(`${prefix}-message`);
+  if (recent == null || total == null) {
+    trend.textContent = '—';
+    trend.className = 'trend-pill';
+    message.textContent = '比較できるデータがありません';
+    return;
+  }
+  const difference = recent - total;
+  trend.textContent = `${difference >= 0 ? '↑ +' : '↓ '}${difference.toFixed(1)}`;
+  trend.className = `trend-pill ${difference >= 0 ? 'trend-up' : 'trend-down'}`;
+  message.textContent = `通算より ${Math.abs(difference).toFixed(1)}${unit} ${difference >= 0 ? '高い' : '低い'}`;
+}
+
+function renderDashboardMedals() {
+  const rankings = computeRankings('month');
+  const counts = [0, 0, 0];
+  Object.keys(RANKING_CATEGORY_LABELS).forEach((key) => {
+    const index = (rankings[key] || []).findIndex((item) => item.id === supabaseMemberId);
+    if (index >= 0 && index < 3) counts[index]++;
+  });
+  const medals = [];
+  if (counts[0]) medals.push(`🥇×${counts[0]}`);
+  if (counts[1]) medals.push(`🥈×${counts[1]}`);
+  if (counts[2]) medals.push(`🥉×${counts[2]}`);
+  document.getElementById('dashboard-ranking').textContent = medals.length ? medals.join(' ') : 'メダルなし';
 }
 
 function renderDashboardAchievements(member, stats) {
   const unlocked = checkAchievements(stats);
   document.getElementById('dashboard-achievement-count').textContent = `${unlocked.length} / ${ACHIEVEMENTS.length}`;
-  const list = document.getElementById('dashboard-achievement-list');
+  const summary = document.getElementById('dashboard-achievement-summary');
   if (!unlocked.length) {
-    list.innerHTML = '<span class="dashboard-achievement-empty">スコアを登録して実績を獲得しよう</span>';
+    summary.innerHTML = '<span class="dashboard-achievement-empty">スコアを登録して実績を獲得しよう</span>';
     return;
   }
-  list.innerHTML = unlocked.map((id) => {
-    const achievement = ACHIEVEMENTS.find((a) => a.id === id);
-    if (!achievement) return '';
-    const equipped = member.equipped === id;
-    return `<button class="dashboard-achievement ${equipped ? 'equipped' : ''}" onclick="showAchievementDetail('${id}', true, ${equipped})" title="${escapeHtml(achievement.name)}"><span>${achievement.icon}</span><small>${escapeHtml(achievement.name)}</small></button>`;
+  summary.innerHTML = unlocked.slice(-4).map((id) => `<span>${getAchievementIcon(id)}</span>`).join('');
+}
+
+function openDashboardAchievements() {
+  const member = appData.members.find((m) => m.id === supabaseMemberId);
+  const stats = appData.stats[supabaseMemberId];
+  const unlocked = checkAchievements(stats);
+  document.getElementById('dashboard-achievements-note').textContent = `獲得済み ${unlocked.length} / ${ACHIEVEMENTS.length}　称号をタップすると詳細を確認・装備できます。`;
+  document.getElementById('dashboard-achievements-grid').innerHTML = ACHIEVEMENTS.map((achievement) => {
+    const isUnlocked = unlocked.includes(achievement.id);
+    const isEquipped = member.equipped === achievement.id;
+    return `<button class="achievement-item ${isUnlocked ? '' : 'locked'} ${isEquipped ? 'equipped' : ''}" onclick="showAchievementDetail('${achievement.id}', ${isUnlocked}, ${isEquipped})"><span class="achievement-icon">${achievement.icon}</span><span class="achievement-name">${escapeHtml(achievement.name)}</span></button>`;
   }).join('');
+  showModal('modal-dashboard-achievements');
 }
 
 function renderDashboardFrameChart(strike, spare, open) {
@@ -86,18 +136,87 @@ function renderDashboardFrameChart(strike, spare, open) {
   });
 }
 
-function renderDashboardScoreChart(games) {
+function renderDashboardScoreChart() {
   const canvas = document.getElementById('dashboardScoreChart');
   if (!canvas) return;
+  const unitSelect = document.getElementById('dashboard-chart-unit');
+  const unit = unitSelect ? unitSelect.value : 'day';
+  const grouped = {};
+  appData.attendance.filter((a) => a.memberId === supabaseMemberId).forEach((attendance) => {
+    let key = attendance.date;
+    if (unit === 'month') key = attendance.date.slice(0, 7);
+    if (unit === 'year') key = attendance.date.slice(0, 4);
+    if (unit === 'quarter') key = `${attendance.date.slice(0, 4)}-Q${Math.ceil(Number(attendance.date.slice(5, 7)) / 3)}`;
+    if (!grouped[key]) grouped[key] = { score: 0, games: 0 };
+    grouped[key].score += Number(attendance.totalScore || 0);
+    grouped[key].games += Number(attendance.gameCount || 0);
+  });
+  const labels = Object.keys(grouped).sort();
+  const points = labels.map((key) => grouped[key].games ? (grouped[key].score / grouped[key].games).toFixed(1) : 0);
   if (dashboardScoreChartInstance) dashboardScoreChartInstance.destroy();
   dashboardScoreChartInstance = new Chart(canvas, {
     type: 'line',
     data: {
-      labels: games.map((g) => `${g.date.slice(5)} ${g.gameNumber}G`),
-      datasets: [{ data: games.map((g) => g.score), borderColor: '#38bdf8', backgroundColor: 'rgba(56,189,248,.12)', fill: true, tension: .32, pointRadius: 3, pointBackgroundColor: '#38bdf8' }]
+      labels,
+      datasets: [{ data: points, borderColor: '#38bdf8', backgroundColor: 'rgba(56,189,248,.12)', fill: true, tension: .32, pointRadius: 3, pointBackgroundColor: '#38bdf8' }]
     },
     options: { responsive: true, maintainAspectRatio: false, scales: { y: { suggestedMin: 80, suggestedMax: 250, grid: { color: '#263244' } }, x: { grid: { display: false }, ticks: { maxRotation: 0, autoSkip: true, maxTicksLimit: 6 } } }, plugins: { legend: { display: false } } }
   });
+}
+
+function renderDashboardHistory() {
+  const attendance = appData.attendance.filter((a) => a.memberId === supabaseMemberId).sort((a, b) => b.date.localeCompare(a.date));
+  const visible = dashboardHistoryExpanded ? attendance : attendance.slice(0, 3);
+  document.getElementById('dashboard-history-count').textContent = `${attendance.length}件`;
+  document.getElementById('dashboard-history-list').innerHTML = visible.length ? visible.map((item) => {
+    const scores = (item.games || []).map((game) => game.score).filter((score) => score != null);
+    const average = item.gameCount ? (item.totalScore / item.gameCount).toFixed(1) : '—';
+    const scoreChips = scores.map((score, index) => `<span class="history-score-chip ${Number(score) >= 200 ? 'score-200' : ''}"><small>${index + 1}G</small><b>${score}</b></span>`).join('');
+    return `<button class="dashboard-history-row" onclick="showGameDetail('${item.id}')"><span class="history-date"><b>${item.date.slice(5).replace('-', '/')}</b><small>${item.date.slice(0, 4)}</small></span><span class="history-scores">${scoreChips || '<small>記録なし</small>'}</span><span class="history-average"><small>AVG</small><b>${average}</b></span><em>›</em></button>`;
+  }).join('') : '<p class="dashboard-empty">スコア履歴がありません</p>';
+  const more = document.getElementById('dashboard-history-more');
+  more.style.display = attendance.length > 3 ? 'block' : 'none';
+  more.textContent = dashboardHistoryExpanded ? '閉じる' : 'もっと見る';
+}
+
+function toggleDashboardHistory() {
+  dashboardHistoryExpanded = !dashboardHistoryExpanded;
+  renderDashboardHistory();
+}
+
+function openDashboardScoreDetail() {
+  document.getElementById('dashboard-detail-start').value = '';
+  document.getElementById('dashboard-detail-end').value = '';
+  renderDashboardScoreDetail();
+  showModal('modal-dashboard-score-detail');
+}
+
+function clearDashboardScoreDetailFilter() {
+  document.getElementById('dashboard-detail-start').value = '';
+  document.getElementById('dashboard-detail-end').value = '';
+  renderDashboardScoreDetail();
+}
+
+function renderDashboardScoreDetail() {
+  const start = document.getElementById('dashboard-detail-start').value;
+  const end = document.getElementById('dashboard-detail-end').value;
+  let attendance = appData.attendance.filter((a) => a.memberId === supabaseMemberId);
+  if (start) attendance = attendance.filter((a) => a.date >= start);
+  if (end) attendance = attendance.filter((a) => a.date <= end);
+  const games = attendance.flatMap((a) => a.games || []).filter((g) => g.score != null);
+  const average = games.length ? games.reduce((sum, game) => sum + Number(game.score), 0) / games.length : null;
+  const high = games.length ? Math.max(...games.map((game) => Number(game.score))) : null;
+  const detail = computeAdvancedFrameStats(attendance);
+  document.getElementById('dashboard-detail-avg').textContent = average == null ? '—' : average.toFixed(1);
+  document.getElementById('dashboard-detail-high').textContent = high == null ? '—' : `${high}`;
+  document.getElementById('dashboard-detail-games').textContent = `${games.length}G`;
+  const format = (value, unit, digits = 1) => value == null ? '—' : `${value.toFixed(digits)}${unit}`;
+  document.getElementById('dashboard-detail-stats').innerHTML = [
+    ['1投目平均倒ピン数', format(detail.firstBallAvg, '本')], ['ストライク率', format(detail.strikeRate, '%')],
+    ['マーク率', format(detail.markRate, '%')], ['オープンフレーム率', format(detail.openFrameRate, '%')],
+    ['スプリットカバー率', format(detail.splitCoverRate, '%')], ['10フレーム目平均獲得点', format(detail.frame10Avg, '点')],
+    ['ダブル発生（1G平均）', format(detail.doublesPerGame, '回', 2)], ['ターキー発生（1G平均）', format(detail.turkeysPerGame, '回', 2)]
+  ].map(([label, value]) => `<div><span>${label}</span><b>${value}</b></div>`).join('');
 }
 
 function toggleDashboardAdmin() {
