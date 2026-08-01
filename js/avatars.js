@@ -16,8 +16,8 @@
     }
 
     function showAvatarPicker() {
-      if (!currentMyPageMemberId) return;
-      const member = appData.members.find(m => m.id === currentMyPageMemberId);
+      if (!currentProfileMemberId) return;
+      const member = appData.members.find(m => m.id === currentProfileMemberId);
       const grid = document.getElementById('avatar-picker-grid');
       grid.innerHTML = AVATAR_OPTIONS.map(emoji => `
         <div class="avatar-picker-item ${member && member.avatar === emoji ? 'selected' : ''}" onclick="submitAvatarChoice('${emoji}')">${emoji}</div>
@@ -27,7 +27,7 @@
 
     function submitAvatarChoice(emoji) {
       document.getElementById('loading').style.display = 'block';
-      supabaseSetAvatar(currentMyPageMemberId, emoji).then(res => {
+      supabaseSetAvatar(currentProfileMemberId, emoji).then(res => {
         document.getElementById('loading').style.display = 'none';
         showToast(res.message);
         if (!res.success) return;
@@ -163,7 +163,7 @@
 
     async function confirmAvatarCrop() {
       const s = avatarCropState;
-      if (!s || !currentMyPageMemberId) return;
+      if (!s || !currentProfileMemberId) return;
       const imgEl = document.getElementById('avatar-crop-img');
       const OUT = 400; // 保存する正方形画像の出力サイズ(px)
       const ratio = OUT / s.stageSize;
@@ -179,7 +179,7 @@
       canvas.toBlob(async (blob) => {
         if (!blob) { showToast('画像の処理に失敗しました'); return; }
         document.getElementById('loading').style.display = 'block';
-        const result = await uploadAvatarPhoto(currentMyPageMemberId, blob);
+        const result = await uploadAvatarPhoto(currentProfileMemberId, blob);
         document.getElementById('loading').style.display = 'none';
         showToast(result.message);
         if (!result.success) return;

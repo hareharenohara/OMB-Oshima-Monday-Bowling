@@ -81,7 +81,7 @@
       </section>
 
       <section class="dashboard-hero">
-        <div class="dashboard-user"><div class="dashboard-avatar-wrap"><button id="dashboard-avatar" class="dashboard-avatar" onclick="openDashboardAvatarPicker()" title="プロフィール画像を変更"></button><span id="dashboard-equipped-badge" class="dashboard-equipped-badge"></span></div><div><small id="dashboard-welcome-label">Welcome back</small><h2 id="dashboard-name">こんにちは</h2></div></div>
+        <div class="dashboard-user"><div class="dashboard-avatar-wrap"><button id="dashboard-avatar" class="dashboard-avatar" onclick="openDashboardAvatarPicker()" title="プロフィール画像を変更" aria-label="プロフィール画像を変更"></button><span id="dashboard-equipped-badge" class="dashboard-equipped-badge"></span></div><div><small id="dashboard-welcome-label">Welcome back</small><h2 id="dashboard-name">こんにちは</h2></div></div>
         <button class="dashboard-score-cta" onclick="openScoreRequestModal()"><span class="score-cta-icon" aria-hidden="true"><i></i></span><span class="score-cta-copy"><small>NEW SCORE</small><b>スコアを入力する</b><em>結果票の読み取り・手入力</em></span><span class="score-cta-arrow">→</span></button>
       </section>
 
@@ -118,7 +118,7 @@
         </button>
         <button class="dashboard-card dashboard-member-card" onclick="navigateTo('tab-members')"><span class="dashboard-member-icon">👥</span><span><b>メンバー</b><small>一覧を見る</small></span><em>›</em></button>
       </div>
-      <section class="dashboard-card dashboard-history"><div class="dashboard-card-title"><b>過去のスコア履歴</b><small id="dashboard-history-count"></small></div><div id="dashboard-history-list"></div><button id="dashboard-history-more" class="dashboard-history-more" onclick="toggleDashboardHistory()">もっと見る</button></section>
+      <section class="dashboard-card dashboard-history"><div class="dashboard-card-title"><b>過去のスコア履歴</b><small id="dashboard-history-count"></small></div><div id="dashboard-history-list"></div><button id="dashboard-history-more" class="dashboard-history-more" onclick="openDashboardHistoryPopup()">すべて見る</button></section>
     </div>
 
     <!-- 1. スコア入力タブ -->
@@ -144,40 +144,44 @@
 
     <!-- 2. 回数券残量タブ（収支ダッシュボード付き） -->
     <div id="tab-vault" class="tab-content" style="display: none;">
-      <div class="card vault-personal-card">
-        <small style="color:#94a3b8;">あなたの回数券残量</small>
-        <div id="vault-my-balance" style="font-size:34px;font-weight:bold;margin:8px 0 14px;color:#38bdf8;">— G</div>
-        <button class="btn btn-primary btn-block" onclick="openTicketRequestModal()">回数券を購入申請する</button>
+      <div class="feature-page-header">
+        <span class="feature-page-icon blue">🎟️</span>
+        <span><small>TICKET WALLET</small><h2>回数券</h2><p>残量の確認と購入申請</p></span>
+      </div>
+      <div class="card vault-personal-card feature-card">
+        <div class="vault-balance-label">現在の回数券残量</div>
+        <div class="vault-balance-row"><strong id="vault-my-balance">— G</strong><span>利用可能</span></div>
+        <button class="vault-request-button" onclick="openTicketRequestModal()"><span>＋</span><b>回数券を購入申請</b><em>›</em></button>
       </div>
       <div class="admin-only">
-      <div class="card">
-        <h4 style="margin: 0 0 8px 0; color: #38bdf8;">🎟️ 回数券 収支ダッシュボード</h4>
+      <div class="card feature-card vault-admin-card">
+        <div class="feature-card-heading"><span><small>ADMIN SUMMARY</small><b>回数券の収支</b></span></div>
         <div class="balance-grid">
           <div class="balance-box">
-            <div style="font-size: 11px; color: #aaa;">総入荷 (＋)</div>
-            <div class="balance-val" id="vault-in" style="color: #4ade80;">0 G</div>
+            <div>総入荷</div>
+            <div class="balance-val vault-in" id="vault-in">0 G</div>
           </div>
           <div class="balance-box">
-            <div style="font-size: 11px; color: #aaa;">総消費 (－)</div>
-            <div class="balance-val" id="vault-out" style="color: #f87171;">0 G</div>
+            <div>総消費</div>
+            <div class="balance-val vault-out" id="vault-out">0 G</div>
           </div>
           <div class="balance-box">
-            <div style="font-size: 11px; color: #aaa;">現在プール残高</div>
-            <div class="balance-val" id="vault-games" style="color: #38bdf8;">0 G</div>
+            <div>プール残高</div>
+            <div class="balance-val vault-pool" id="vault-games">0 G</div>
           </div>
         </div>
-        <p style="font-size: 12px; margin: 10px 0 0 0; color: #aaa; text-align: right;">在籍メンバー数: <span id="vault-members">0</span> 名</p>
+        <p class="vault-member-count">在籍メンバー <b id="vault-members">0</b>名</p>
       </div>
 
-      <div class="card">
-        <h4 style="margin: 0 0 8px 0; color: #f87171;">⚠️ 残数少メンバー（残り3G以下）</h4>
-        <div id="low-balance-container" style="font-size: 13px;"></div>
+      <div class="card feature-card">
+        <div class="feature-card-heading warning"><span><small>LOW BALANCE</small><b>残数の少ないメンバー</b></span><em>3G以下</em></div>
+        <div id="low-balance-container" class="low-balance-list"></div>
       </div>
 
-      <div class="card">
-        <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom: 8px;">
-          <h4 style="margin: 0; color:#e0e0e0;">📊 残高推移グラフ（入り＋／消化－）</h4>
-          <select id="vault-chart-filter" onchange="renderVaultChart()" style="font-size:12px;">
+      <div class="card feature-card">
+        <div class="feature-card-heading">
+          <span><small>BALANCE TREND</small><b>残高推移</b></span>
+          <select id="vault-chart-filter" onchange="renderVaultChart()">
             <option value="all">通算</option>
             <option value="year">今年</option>
             <option value="quarter">今四半期</option>
@@ -187,9 +191,9 @@
         <div class="ledger-chart-wrap"><canvas id="vaultBalanceChart"></canvas></div>
       </div>
 
-      <div class="card">
-        <h4 style="margin: 0 0 8px 0;">📋 回数券 入出履歴 (月別)</h4>
-        <p style="font-size:11px; color:#888; margin:-4px 0 8px 0;">🟢 入り＝回数券購入 🔴 出＝その日の消化ゲーム数</p>
+      <div class="card feature-card">
+        <div class="feature-card-heading"><span><small>LEDGER</small><b>入出履歴</b></span><em>月別</em></div>
+        <div class="vault-ledger-legend"><span class="in">＋ 購入</span><span class="out">－ 消化</span></div>
         <div id="vault-accordion-container"></div>
       </div>
       </div>
@@ -197,17 +201,21 @@
 
     <!-- 3. ランキングタブ -->
     <div id="tab-ranking" class="tab-content" style="display: none;">
-      <div class="card">
-        <div style="margin-bottom: 12px; font-size: 13px; display: flex; align-items: center; gap: 8px;">
-          <label>集計期間: </label>
+      <div class="feature-page-header">
+        <span class="feature-page-icon gold">🏆</span>
+        <span><small>LEADERBOARD</small><h2>ランキング</h2><p>メンバーの成績を期間別に比較</p></span>
+      </div>
+      <div class="ranking-toolbar">
+          <label for="ranking-filter">集計期間</label>
           <select id="ranking-filter" onchange="renderRanking()">
             <option value="all">通算（歴代）</option>
             <option value="year">今年</option>
             <option value="quarter">今四半期</option>
             <option value="month" selected>今月</option>
           </select>
-        </div>
-        <p style="font-size:11px; color:#666; margin: -4px 0 10px 0;">👆 各ランキングのタイトルをタップすると集計方法の説明が見られます</p>
+      </div>
+      <p class="ranking-guide">各見出しの情報ボタンから集計方法を確認できます</p>
+      <div class="ranking-shell">
 
         <div class="ranking-section">
           <div class="ranking-section-title" onclick="showRankingInfo('avg')">🥇 アベレージランキング <span style="font-size:11px; color:#666;">ℹ️</span></div>
@@ -468,127 +476,6 @@
     </div>
   </div>
 
-  <div id="modal-mypage" class="modal">
-    <div class="modal-content">
-      <!-- 1. 名前 -->
-      <div style="display:flex; align-items:center; gap:12px; margin-bottom: 12px;">
-        <div class="avatar-wrapper mypage">
-          <div class="mypage-avatar-btn" id="mypage-avatar-btn"></div>
-          <span id="mypage-equipped-badge" class="equipped-badge" style="display:none;"></span>
-        </div>
-        <h3 id="mypage-name" style="margin:0;"></h3>
-      </div>
-
-      <!-- 2. 絞り込み -->
-      <div style="background: #1e293b; padding: 10px; border-radius: 8px; margin-bottom: 12px;">
-        <div style="font-size: 12px; color: #94a3b8; margin-bottom: 6px;">📅 期間絞り込み</div>
-        <div style="display: flex; gap: 6px; align-items: center; flex-wrap: wrap;">
-          <input type="date" id="mypage-filter-start" onchange="renderMyPageData()" style="padding: 4px; font-size: 12px; background: #0f172a; color: #fff; border: 1px solid #334155; border-radius: 4px;">
-          <span style="color: #94a3b8; font-size: 12px;">～</span>
-          <input type="date" id="mypage-filter-end" onchange="renderMyPageData()" style="padding: 4px; font-size: 12px; background: #0f172a; color: #fff; border: 1px solid #334155; border-radius: 4px;">
-          <button class="btn btn-secondary btn-sm" onclick="clearGraphDateFilter()">クリア</button>
-        </div>
-      </div>
-
-      <!-- 3. ランキング -->
-      <div style="background: #252525; border: 1px solid #333; border-radius: 8px; padding: 10px; margin-bottom: 12px;">
-        <div style="display:flex; justify-content:space-between; align-items:center; cursor:pointer;" onclick="toggleMyPageRanking()">
-          <div style="font-size: 13px; font-weight: bold;">
-            🏅 ランキング <span id="mypage-ranking-summary" style="color:#facc15; font-size: 12px;"></span>
-          </div>
-          <button class="btn btn-secondary btn-sm" onclick="event.stopPropagation(); toggleMyPageRanking();" id="toggle-ranking-btn">詳細を見る ▼</button>
-        </div>
-        <div id="mypage-ranking-full" style="display: none; margin-top: 10px; border-top: 1px dashed #444; padding-top: 8px;">
-          <select id="mypage-ranking-filter" onchange="renderMyPageRankingDetail()" style="font-size:12px; margin-bottom: 8px; width: 100%;">
-            <option value="month" selected>今月</option>
-            <option value="quarter">今四半期</option>
-            <option value="year">今年</option>
-            <option value="all">通算</option>
-          </select>
-          <div id="mypage-ranking-list" style="font-size: 12px;"></div>
-        </div>
-      </div>
-
-      <!-- 4. スコア -->
-      <div style="background: #252525; padding: 10px; border-radius: 8px; margin-bottom: 12px; font-size: 13px;">
-        <div style="display:flex; justify-content:space-between; margin-bottom: 4px;">
-          <span>通算アベレージ:</span><strong id="mypage-avg-total"></strong>
-        </div>
-        <div style="display:flex; justify-content:space-between; margin-bottom: 4px;">
-          <span>直近15Gアベレージ:</span><strong id="mypage-avg-recent" style="color:#facc15;"></strong>
-        </div>
-        <div style="display:flex; justify-content:space-between;">
-          <span>最高スコア:</span><strong id="mypage-high"></strong>
-        </div>
-      </div>
-
-      <!-- 4.5 フレーム詳細統計 -->
-      <div style="background: #252525; padding: 10px; border-radius: 8px; margin-bottom: 12px; font-size: 13px;">
-        <div style="font-weight:bold; margin-bottom:6px;">🎯 投球詳細統計 <span id="mypage-frame-stats-note" style="color:#888; font-size:11px; font-weight:normal;"></span></div>
-        <div id="mypage-frame-stats-body">
-          <div style="display:flex; justify-content:space-between; margin-bottom: 4px;"><span>1球平均倒ピン数:</span><strong id="mypage-fba">-</strong></div>
-          <div style="display:flex; justify-content:space-between; margin-bottom: 4px;"><span>ストライク率:</span><strong id="mypage-strike-rate">-</strong></div>
-          <div style="display:flex; justify-content:space-between; margin-bottom: 4px;"><span>マーク率:</span><strong id="mypage-mark-rate">-</strong></div>
-          <div style="display:flex; justify-content:space-between; margin-bottom: 4px;"><span>オープンフレーム率:</span><strong id="mypage-open-rate">-</strong></div>
-          <div style="display:flex; justify-content:space-between; margin-bottom: 4px;"><span>スプリットのカバー確率:</span><strong id="mypage-splitcover">-</strong></div>
-          <div style="display:flex; justify-content:space-between; margin-bottom: 4px;"><span>10フレーム目 平均獲得点:</span><strong id="mypage-f10avg">-</strong></div>
-          <div style="display:flex; justify-content:space-between; margin-bottom: 4px;"><span>ダブル発生(1ゲーム平均):</span><strong id="mypage-doubles">-</strong></div>
-          <div style="display:flex; justify-content:space-between;"><span>ターキー発生(1ゲーム平均):</span><strong id="mypage-turkeys">-</strong></div>
-        </div>
-      </div>
-
-      <!-- 5. 過去のスコア履歴 -->
-      <div style="background: #252525; border: 1px solid #333; border-radius: 8px; padding: 10px; margin-bottom: 12px;">
-        <div style="display:flex; justify-content:space-between; align-items:center;">
-          <div>
-            <div style="font-size: 13px; font-weight: bold;">
-              📜 過去のスコア履歴 <span id="mypage-history-count" style="color:#38bdf8; font-size: 12px;"></span>
-            </div>
-            <div style="font-size: 11px; color: #facc15; margin-top: 2px;">
-              期間内Avg: <strong id="mypage-history-avg">-</strong>
-            </div>
-          </div>
-          <button class="btn btn-secondary btn-sm" onclick="toggleMyPageHistory()" id="toggle-history-btn">表示する ▼</button>
-        </div>
-        <div id="mypage-history-full" style="display: none; margin-top: 10px; border-top: 1px dashed #444; padding-top: 8px; max-height: 200px; overflow-y: auto;">
-          <div id="mypage-history-list"></div>
-        </div>
-      </div>
-
-      <!-- 6. スコア推移グラフ -->
-      <div style="display:flex; justify-content:space-between; align-items:center; margin: 15px 0 6px 0;">
-        <h4 style="margin: 0; font-size: 14px;">📈 スコア推移グラフ</h4>
-        <select id="chart-unit-select" onchange="renderMyPageData()" style="padding:2px 6px; font-size:11px;">
-          <option value="day" selected>日単位</option>
-          <option value="month">月単位</option>
-          <option value="quarter">四半期単位</option>
-          <option value="year">年単位</option>
-        </select>
-      </div>
-      <div style="width: 100%; height: 180px;">
-        <canvas id="scoreChart"></canvas>
-      </div>
-
-      <!-- 7. 称号・実績 -->
-      <div style="background: #252525; border: 1px solid #333; border-radius: 8px; padding: 10px; margin-top: 15px;">
-        <div style="display:flex; justify-content:space-between; align-items:center;">
-          <div style="font-size: 13px; font-weight: bold;">
-            🏆 称号・実績 <span id="mypage-ach-count" style="color:#38bdf8; font-size: 12px;"></span>
-          </div>
-          <button class="btn btn-secondary btn-sm" onclick="toggleAchievementList()" id="toggle-ach-btn">一覧を見る ▼</button>
-        </div>
-        <div id="mypage-ach-summary" style="margin-top: 6px; font-size: 12px; color: #aaa;"></div>
-        <div id="mypage-ach-full" style="display: none; margin-top: 10px; border-top: 1px dashed #444; padding-top: 8px;">
-          <div id="mypage-badges" class="achievement-grid"></div>
-        </div>
-      </div>
-
-      <div style="text-align: right; margin-top: 15px;">
-        <button class="btn btn-secondary" onclick="closeModal('modal-mypage')">閉じる</button>
-      </div>
-    </div>
-  </div>
-
   <div id="modal-history-view" class="modal">
     <div class="modal-content">
       <h3 style="margin-top:0;">📜 スコア記録履歴</h3>
@@ -730,7 +617,7 @@
 
   <div id="modal-dashboard-achievements" class="modal">
     <div class="modal-content">
-      <div class="modal-heading-row"><h3>🏆 称号・実績</h3><button class="modal-close-x" onclick="closeModal('modal-dashboard-achievements')">×</button></div>
+      <div class="modal-heading-row"><h3>🏆 称号・実績</h3><button class="modal-close-x" onclick="closeModal('modal-dashboard-achievements')" aria-label="閉じる">×</button></div>
       <p id="dashboard-achievements-note" class="modal-note"></p>
       <div id="dashboard-achievements-grid" class="achievement-grid"></div>
     </div>
@@ -738,20 +625,30 @@
 
   <div id="modal-dashboard-score-detail" class="modal">
     <div class="modal-content">
-      <div class="modal-heading-row"><h3>📈 スコア詳細</h3><button class="modal-close-x" onclick="closeModal('modal-dashboard-score-detail')">×</button></div>
+      <div class="modal-heading-row"><h3>📈 スコア詳細</h3><button class="modal-close-x" onclick="closeModal('modal-dashboard-score-detail')" aria-label="閉じる">×</button></div>
       <div class="dashboard-detail-filter"><label>開始日<input type="date" id="dashboard-detail-start" onchange="renderDashboardScoreDetail()"></label><span>～</span><label>終了日<input type="date" id="dashboard-detail-end" onchange="renderDashboardScoreDetail()"></label><button class="btn btn-secondary btn-sm" onclick="clearDashboardScoreDetailFilter()">クリア</button></div>
       <div class="dashboard-detail-summary"><div><small>期間内アベレージ</small><b id="dashboard-detail-avg">—</b></div><div><small>最高スコア</small><b id="dashboard-detail-high">—</b></div><div><small>ゲーム数</small><b id="dashboard-detail-games">—</b></div></div>
       <div class="dashboard-detail-stats"><h4>投球詳細統計</h4><div id="dashboard-detail-stats"></div></div>
     </div>
   </div>
 
+  <div id="modal-dashboard-history" class="modal">
+    <div class="modal-content">
+      <div class="modal-heading-row"><div><h3>📜 スコア履歴</h3><small id="dashboard-history-popup-name"></small></div><button class="modal-close-x" onclick="closeModal('modal-dashboard-history')" aria-label="閉じる">×</button></div>
+      <div class="dashboard-history-filter"><label>月で絞り込み<input type="month" id="dashboard-history-month" onchange="resetDashboardHistoryPopup()"></label><button class="btn btn-secondary btn-sm" onclick="clearDashboardHistoryMonth()">すべての期間</button></div>
+      <div class="dashboard-history-popup-meta"><span id="dashboard-history-popup-count"></span><span>新しい順</span></div>
+      <div id="dashboard-history-popup-list" class="dashboard-history-popup-list"></div>
+      <button id="dashboard-history-load-more" class="dashboard-history-load-more" onclick="loadMoreDashboardHistory()">さらに表示</button>
+    </div>
+  </div>
+
   <script src="js/app.js"></script>
   <script src="js/auth.js"></script>
+  <script src="js/stats.js"></script>
   <script src="js/data.js"></script>
   <script src="js/scores.js"></script>
   <script src="js/requests.js?v=708b149"></script>
   <script src="js/vault.js"></script>
-  <script src="js/mypage.js"></script>
   <script src="js/rankings.js"></script>
   <script src="js/history.js"></script>
   <script src="js/achievements.js"></script>

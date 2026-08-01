@@ -40,18 +40,6 @@
       document.getElementById(id).style.display = 'none';
     }
 
-    function toggleAchievementList() {
-      const el = document.getElementById('mypage-ach-full');
-      const btn = document.getElementById('toggle-ach-btn');
-      if (el.style.display === 'none') {
-        el.style.display = 'block';
-        btn.innerText = '閉じる ▲';
-      } else {
-        el.style.display = 'none';
-        btn.innerText = '一覧を見る ▼';
-      }
-    }
-
     function openAdminSettings() {
       const settings = appData.settings || { pricePerPack: 3000, gamesPerPack: 11 };
       document.getElementById('settings-price-per-pack').value = settings.pricePerPack;

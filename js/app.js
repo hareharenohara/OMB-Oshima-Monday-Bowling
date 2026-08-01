@@ -1,7 +1,6 @@
 let appData = {};
     let isAdmin = false;
-    let scoreChartInstance = null;
-    let currentMyPageMemberId = null;
+    let currentProfileMemberId = null;
     let selectedAchievementId = null;
     let currentPacksCount = 1;
 

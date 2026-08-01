@@ -73,11 +73,6 @@
       checkPushSubscriptionState();
     }
 
-    function openMyOwnPage() {
-      if (!supabaseMemberId) return;
-      navigateTo('tab-dashboard');
-    }
-
     function renderAccountButton() {
       const btn = document.getElementById('account-btn');
       if (!btn || !supabaseMemberId) return;

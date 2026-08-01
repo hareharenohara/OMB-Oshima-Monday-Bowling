@@ -1,7 +1,18 @@
 let dashboardFrameChartInstance = null;
 let dashboardScoreChartInstance = null;
-let dashboardHistoryExpanded = false;
+let dashboardHistoryVisibleCount = 15;
 let dashboardViewedMemberId = null;
+
+const RANKING_CATEGORY_LABELS = {
+  avg: 'アベレージ',
+  g3: '3G合計スコア',
+  high: 'ハイスコア(1G)',
+  games: '投球ゲーム数',
+  gapMax: '最多ギャップ',
+  gapMin: '最小ギャップ',
+  mip: '急成長(MIP)',
+  giant: 'ジャイアントキリング'
+};
 
 function getDashboardMemberId() {
   return dashboardViewedMemberId || supabaseMemberId;
@@ -9,7 +20,6 @@ function getDashboardMemberId() {
 
 function openMemberDashboard(memberId) {
   dashboardViewedMemberId = memberId;
-  dashboardHistoryExpanded = false;
   switchTab('tab-dashboard');
   closeAppMenu();
   renderDashboard();
@@ -39,7 +49,7 @@ function renderDashboard() {
   const stats = appData.stats[memberId];
   if (!member || !stats) return;
   const isOwnDashboard = memberId === supabaseMemberId;
-  currentMyPageMemberId = memberId;
+  currentProfileMemberId = memberId;
   const dashboard = document.getElementById('tab-dashboard');
   dashboard.classList.toggle('member-dashboard', !isOwnDashboard);
   document.getElementById('dashboard-viewing-name').textContent = member.name;
@@ -198,22 +208,56 @@ function renderDashboardScoreChart() {
 
 function renderDashboardHistory() {
   const attendance = appData.attendance.filter((a) => a.memberId === getDashboardMemberId()).sort((a, b) => b.date.localeCompare(a.date));
-  const visible = dashboardHistoryExpanded ? attendance : attendance.slice(0, 3);
+  const visible = attendance.slice(0, 3);
   document.getElementById('dashboard-history-count').textContent = `${attendance.length}件`;
-  document.getElementById('dashboard-history-list').innerHTML = visible.length ? visible.map((item) => {
-    const scores = (item.games || []).map((game) => game.score).filter((score) => score != null);
-    const average = item.gameCount ? (item.totalScore / item.gameCount).toFixed(1) : '—';
-    const scoreChips = scores.map((score, index) => `<span class="history-score-chip ${Number(score) >= 200 ? 'score-200' : ''}"><small>${index + 1}G</small><b>${score}</b></span>`).join('');
-    return `<button class="dashboard-history-row" onclick="showGameDetail('${item.id}')"><span class="history-date"><b>${item.date.slice(5).replace('-', '/')}</b><small>${item.date.slice(0, 4)}</small></span><span class="history-scores">${scoreChips || '<small>記録なし</small>'}</span><span class="history-average"><small>AVG</small><b>${average}</b></span><em>›</em></button>`;
-  }).join('') : '<p class="dashboard-empty">スコア履歴がありません</p>';
+  document.getElementById('dashboard-history-list').innerHTML = visible.length ? visible.map((item) => dashboardHistoryRowHtml(item, false)).join('') : '<p class="dashboard-empty">スコア履歴がありません</p>';
   const more = document.getElementById('dashboard-history-more');
   more.style.display = attendance.length > 3 ? 'block' : 'none';
-  more.textContent = dashboardHistoryExpanded ? '閉じる' : 'もっと見る';
+  more.textContent = 'すべて見る';
 }
 
-function toggleDashboardHistory() {
-  dashboardHistoryExpanded = !dashboardHistoryExpanded;
-  renderDashboardHistory();
+function dashboardHistoryRowHtml(item, closePopup) {
+  const scores = (item.games || []).map((game) => game.score).filter((score) => score != null);
+  const average = item.gameCount ? (item.totalScore / item.gameCount).toFixed(1) : '—';
+  const scoreChips = scores.map((score, index) => `<span class="history-score-chip ${Number(score) >= 200 ? 'score-200' : ''}"><small>${index + 1}G</small><b>${score}</b></span>`).join('');
+  const action = `${closePopup ? "closeModal('modal-dashboard-history');" : ''}showGameDetail('${item.id}')`;
+  return `<button class="dashboard-history-row" onclick="${action}"><span class="history-date"><b>${item.date.slice(5).replace('-', '/')}</b><small>${item.date.slice(0, 4)}</small></span><span class="history-scores">${scoreChips || '<small>記録なし</small>'}</span><span class="history-average"><small>AVG</small><b>${average}</b></span><em>›</em></button>`;
+}
+
+function openDashboardHistoryPopup() {
+  dashboardHistoryVisibleCount = 15;
+  document.getElementById('dashboard-history-month').value = '';
+  const member = appData.members.find((item) => item.id === getDashboardMemberId());
+  document.getElementById('dashboard-history-popup-name').textContent = member ? `${member.name}さん` : '';
+  renderDashboardHistoryPopup();
+  showModal('modal-dashboard-history');
+}
+
+function resetDashboardHistoryPopup() {
+  dashboardHistoryVisibleCount = 15;
+  renderDashboardHistoryPopup();
+}
+
+function clearDashboardHistoryMonth() {
+  document.getElementById('dashboard-history-month').value = '';
+  resetDashboardHistoryPopup();
+}
+
+function loadMoreDashboardHistory() {
+  dashboardHistoryVisibleCount += 15;
+  renderDashboardHistoryPopup();
+}
+
+function renderDashboardHistoryPopup() {
+  const month = document.getElementById('dashboard-history-month').value;
+  let attendance = appData.attendance.filter((item) => item.memberId === getDashboardMemberId());
+  if (month) attendance = attendance.filter((item) => item.date.startsWith(month));
+  attendance.sort((a, b) => b.date.localeCompare(a.date));
+  const visible = attendance.slice(0, dashboardHistoryVisibleCount);
+  document.getElementById('dashboard-history-popup-count').textContent = `${attendance.length}件${month ? `（${month.replace('-', '年')}月）` : ''}`;
+  document.getElementById('dashboard-history-popup-list').innerHTML = visible.length ? visible.map((item) => dashboardHistoryRowHtml(item, true)).join('') : '<p class="dashboard-empty">該当するスコア履歴がありません</p>';
+  const loadMore = document.getElementById('dashboard-history-load-more');
+  loadMore.style.display = visible.length < attendance.length ? 'block' : 'none';
 }
 
 function openDashboardScoreDetail() {

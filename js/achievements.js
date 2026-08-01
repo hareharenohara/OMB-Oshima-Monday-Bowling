@@ -115,7 +115,7 @@
       
       const statusBadge = document.getElementById('ach-detail-status');
       const equipBtn = document.getElementById('ach-equip-btn');
-      const isOwnPage = (currentMyPageMemberId === supabaseMemberId);
+      const isOwnPage = (currentProfileMemberId === supabaseMemberId);
 
       if (isEquipped) {
         statusBadge.innerText = '装備中'; statusBadge.className = 'badge badge-green';
@@ -132,12 +132,11 @@
 
     function equipCurrentAchievement() {
       document.getElementById('loading').style.display = 'block';
-      supabaseSetEquippedAchievement(currentMyPageMemberId, selectedAchievementId).then(res => {
+      supabaseSetEquippedAchievement(currentProfileMemberId, selectedAchievementId).then(res => {
         document.getElementById('loading').style.display = 'none';
         showToast(res.message);
         if (!res.success) return;
         closeModal('modal-achievement-detail');
-        closeModal('modal-mypage');
         closeModal('modal-dashboard-achievements');
         fetchData();
       });

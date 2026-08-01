@@ -18,14 +18,14 @@
         if (stats.remainingGames <= 3) {
           hasLow = true;
           lowContainer.innerHTML += `
-            <div style="display:flex; justify-content:space-between; align-items:center; padding:6px 0; border-bottom:1px solid #2d2d2d;">
-              <span>${escapeHtml(m.name)} (残り ${stats.remainingGames} G)</span>
+            <div class="low-balance-row">
+              <span><b>${escapeHtml(m.name)}</b><small>残り ${stats.remainingGames} G</small></span>
               <button class="btn btn-success btn-sm admin-only" onclick="showChargeModal('', '${m.id}', '${m.name}')">追加</button>
             </div>
           `;
         }
       });
-      if (!hasLow) lowContainer.innerHTML = '<span style="color:#888;">該当者はいません</span>';
+      if (!hasLow) lowContainer.innerHTML = '<div class="feature-empty">該当者はいません</div>';
 
       renderVaultLedger();
     }

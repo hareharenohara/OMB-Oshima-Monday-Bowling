@@ -38,39 +38,6 @@
       }).join('');
     }
 
-    function toggleMyPageHistoryDetail(sessionId) {
-      const el = document.getElementById(`mypage-history-detail-${sessionId}`);
-      if (!el) return;
-      if (el.style.display === 'block') {
-        el.style.display = 'none';
-        return;
-      }
-      const att = appData.attendance.find(a => a.id === sessionId);
-      const games = (att && att.games) || [];
-      if (games.length === 0) {
-        el.innerHTML = '<p style="font-size:11px; color:#888; margin:0;">記録がありません。</p>';
-      } else {
-        el.innerHTML = games.map(g => {
-          const hasFrames = g.frames && g.frames.length > 0 && g.frames.some(f => f.score != null || (f.throws && f.throws.length));
-          if (!hasFrames) {
-            return `
-              <div style="margin-bottom:10px;">
-                <div class="game-detail-label" style="font-size:12px;">${g.gameNumber}G: ${g.score != null ? g.score : '-'}点</div>
-                <p style="font-size:11px; color:#888; margin:0;">フレーム詳細なし(合計のみの記録です)</p>
-              </div>
-            `;
-          }
-          return `
-            <div style="margin-bottom:10px;">
-              <div class="game-detail-label" style="font-size:12px;">${g.gameNumber}G: ${g.score != null ? g.score : '-'}点</div>
-              <div class="scoreboard-strip">${renderFrameViewStrip(g.frames)}</div>
-            </div>
-          `;
-        }).join('');
-      }
-      el.style.display = 'block';
-    }
-
     function showGameDetail(sessionId) {
       const att = appData.attendance.find(a => a.id === sessionId);
       if (!att) return;
