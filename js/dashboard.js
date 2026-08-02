@@ -11,7 +11,13 @@ const RANKING_CATEGORY_LABELS = {
   gapMax: '最多ギャップ',
   gapMin: '最小ギャップ',
   mip: '急成長(MIP)',
-  giant: 'ジャイアントキリング'
+  giant: 'ジャイアントキリング',
+  strikeRate: 'ストライク率',
+  openFrame: 'オープンフレーム率',
+  splitCover: 'スプリットカバー率',
+  doubleTurkey: 'ダブル・ターキー発生率',
+  frame10: '10フレーム目 平均獲得点',
+  fba: '1球平均倒ピン数'
 };
 
 function getDashboardMemberId() {
@@ -200,9 +206,9 @@ function renderDashboardMemberCarousel() {
     const avatar = avatarInnerHtml(member.avatar, member.name.charAt(0));
     const cardTier = counts[0] > 0 ? 'gold' : counts[1] > 0 ? 'silver' : counts[2] > 0 ? 'bronze' : 'standard';
     const medalTokens = [
-      ...Array(counts[0]).fill('<i class="tcg-medal tcg-medal-gold" title="今月の1位メダル"><span>1</span></i>'),
-      ...Array(counts[1]).fill('<i class="tcg-medal tcg-medal-silver" title="今月の2位メダル"><span>2</span></i>'),
-      ...Array(counts[2]).fill('<i class="tcg-medal tcg-medal-bronze" title="今月の3位メダル"><span>3</span></i>')
+      ...Array(counts[0]).fill('<i class="tcg-medal tcg-medal-gold" title="今月の1位メダル"></i>'),
+      ...Array(counts[1]).fill('<i class="tcg-medal tcg-medal-silver" title="今月の2位メダル"></i>'),
+      ...Array(counts[2]).fill('<i class="tcg-medal tcg-medal-bronze" title="今月の3位メダル"></i>')
     ].join('');
     const effect = buildDashboardMemberEffect(member, recent, recentAvg, totalAvg, counts, stats);
     const recentFrameStats = computeAdvancedFrameStats(recent.map((game) => ({ games: [game] })));
