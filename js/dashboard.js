@@ -146,6 +146,40 @@ function getDashboardMedalCounts(memberId, rankings) {
   return counts;
 }
 
+function buildDashboardMemberEffect(member, recent, recentAvg, totalAvg, counts, stats) {
+  const equipped = ACHIEVEMENTS.find((achievement) => achievement.id === member.equipped);
+  const titleName = equipped ? equipped.name : '無名のボウラー';
+  const heading = `【${titleName.endsWith('族') ? titleName : `${titleName}族`}／効果】`;
+  const sentences = [];
+
+  if (recentAvg != null && totalAvg != null) {
+    const difference = recentAvg - totalAvg;
+    if (Math.abs(difference) < 0.05) {
+      sentences.push(`このプレイヤーの直近15G平均は${recentAvg.toFixed(1)}であり、通算平均と同値である。`);
+    } else {
+      sentences.push(`このプレイヤーの直近15G平均は${recentAvg.toFixed(1)}であり、通算平均を${Math.abs(difference).toFixed(1)}${difference > 0 ? '上回る' : '下回る'}。`);
+    }
+  } else {
+    sentences.push('このプレイヤーの直近15G平均は現在集計中である。');
+  }
+
+  const frameStats = computeAdvancedFrameStats(recent.map((game) => ({ games: [game] })));
+  if (frameStats.firstBallAvg != null && frameStats.markRate != null) {
+    sentences.push(`1投目平均倒ピン数は${frameStats.firstBallAvg.toFixed(1)}本、マーク率は${frameStats.markRate.toFixed(1)}%。`);
+  } else if (stats.highScore) {
+    sentences.push(`このプレイヤーが記録した最高スコアは${stats.highScore}である。`);
+  }
+
+  const medalTotal = counts.reduce((sum, count) => sum + count, 0);
+  sentences.push(medalTotal ? `今月のランキングメダルを合計${medalTotal}個獲得している。` : '今月のランキングメダルはまだ獲得していない。');
+  return { heading, text: sentences.join('') };
+}
+
+function dashboardRateToCardPoint(rate) {
+  if (rate == null) return '—';
+  return Math.floor(((rate / 100) * 10000) / 100) * 100;
+}
+
 function renderDashboardMemberCarousel() {
   const container = document.getElementById('dashboard-member-carousel');
   if (!container) return;
@@ -165,23 +199,33 @@ function renderDashboardMemberCarousel() {
     const equippedIcon = getAchievementIcon(member.equipped);
     const avatar = avatarInnerHtml(member.avatar, member.name.charAt(0));
     const cardTier = counts[0] > 0 ? 'gold' : counts[1] > 0 ? 'silver' : counts[2] > 0 ? 'bronze' : 'standard';
-    const cardTierLabel = cardTier === 'gold' ? 'MONTHLY GOLD' : cardTier === 'silver' ? 'MONTHLY SILVER' : cardTier === 'bronze' ? 'MONTHLY BRONZE' : 'MEMBER CARD';
+    const medalTokens = [
+      ...Array(counts[0]).fill('<i class="tcg-medal tcg-medal-gold" title="今月の1位メダル"><span>1</span></i>'),
+      ...Array(counts[1]).fill('<i class="tcg-medal tcg-medal-silver" title="今月の2位メダル"><span>2</span></i>'),
+      ...Array(counts[2]).fill('<i class="tcg-medal tcg-medal-bronze" title="今月の3位メダル"><span>3</span></i>')
+    ].join('');
+    const effect = buildDashboardMemberEffect(member, recent, recentAvg, totalAvg, counts, stats);
+    const recentFrameStats = computeAdvancedFrameStats(recent.map((game) => ({ games: [game] })));
+    const strikeRate = recentFrameStats.strikeRate;
+    const spareRate = recentFrameStats.markRate == null || strikeRate == null ? null : Math.max(0, recentFrameStats.markRate - strikeRate);
+    const attack = dashboardRateToCardPoint(strikeRate);
+    const defense = dashboardRateToCardPoint(spareRate);
     return `
       <button class="dashboard-member-slide member-card-${cardTier}" onclick="openMemberDashboard('${member.id}')" aria-label="${escapeHtml(member.name)}さんのダッシュボードを開く">
-        <span class="dashboard-member-profile">
-          <span class="dashboard-member-avatar-wrap">
-            <span class="dashboard-member-avatar">${avatar}</span>
-            ${equippedIcon ? `<span class="dashboard-member-badge">${equippedIcon}</span>` : ''}
-          </span>
-          <span class="dashboard-member-name"><small>${cardTierLabel}</small><b>${escapeHtml(member.name)}</b></span>
-          <em>›</em>
+        <span class="tcg-nameplate"><b>${escapeHtml(member.name)}</b>${equippedIcon ? `<span class="tcg-name-badge" title="装備中の称号">${equippedIcon}</span>` : ''}</span>
+        <span class="tcg-medal-row" aria-label="今月のメダル：1位${counts[0]}個、2位${counts[1]}個、3位${counts[2]}個">
+          ${medalTokens || '<small>NO MEDAL</small>'}
         </span>
-        <span class="dashboard-member-averages">
-          <span><small>直近15G AVG</small><b>${recentAvg == null ? '—' : recentAvg.toFixed(1)}</b></span>
-          <span><small>通算 AVG</small><b>${totalAvg == null ? '—' : totalAvg.toFixed(1)}</b></span>
+        <span class="tcg-art-frame">
+          <span class="tcg-art">${avatar}</span>
         </span>
-        <span class="dashboard-member-medals" aria-label="今月のメダル獲得数">
-          <small>今月のメダル</small><span><b>🥇 ${counts[0]}</b><b>🥈 ${counts[1]}</b><b>🥉 ${counts[2]}</b></span>
+        <span class="tcg-effect-box">
+          <b>${escapeHtml(effect.heading)}</b>
+          <small>${escapeHtml(effect.text)}</small>
+        </span>
+        <span class="tcg-stats">
+          <span><small>ATK/</small><b>${attack}</b></span>
+          <span><small>DEF/</small><b>${defense}</b></span>
         </span>
       </button>
     `;
