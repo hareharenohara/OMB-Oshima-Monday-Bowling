@@ -164,14 +164,16 @@ function renderDashboardMemberCarousel() {
     const counts = getDashboardMedalCounts(member.id, rankings);
     const equippedIcon = getAchievementIcon(member.equipped);
     const avatar = avatarInnerHtml(member.avatar, member.name.charAt(0));
+    const cardTier = counts[0] > 0 ? 'gold' : counts[1] > 0 ? 'silver' : counts[2] > 0 ? 'bronze' : 'standard';
+    const cardTierLabel = cardTier === 'gold' ? 'MONTHLY GOLD' : cardTier === 'silver' ? 'MONTHLY SILVER' : cardTier === 'bronze' ? 'MONTHLY BRONZE' : 'MEMBER CARD';
     return `
-      <button class="dashboard-member-slide" onclick="openMemberDashboard('${member.id}')" aria-label="${escapeHtml(member.name)}さんのダッシュボードを開く">
+      <button class="dashboard-member-slide member-card-${cardTier}" onclick="openMemberDashboard('${member.id}')" aria-label="${escapeHtml(member.name)}さんのダッシュボードを開く">
         <span class="dashboard-member-profile">
           <span class="dashboard-member-avatar-wrap">
             <span class="dashboard-member-avatar">${avatar}</span>
             ${equippedIcon ? `<span class="dashboard-member-badge">${equippedIcon}</span>` : ''}
           </span>
-          <span class="dashboard-member-name"><small>MEMBER</small><b>${escapeHtml(member.name)}</b></span>
+          <span class="dashboard-member-name"><small>${cardTierLabel}</small><b>${escapeHtml(member.name)}</b></span>
           <em>›</em>
         </span>
         <span class="dashboard-member-averages">
