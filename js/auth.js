@@ -1,5 +1,5 @@
     /* ---------------------------------------------------------
-       Supabase 認証（移行ステップ②: ログインゲートのみ）
+       Supabase 認証・保護ルート
        --------------------------------------------------------- */
     async function initSupabaseAndCheckSession() {
       if (SUPABASE_URL.includes('xxxxxxxxxxxx') || SUPABASE_ANON_KEY.includes('ここに')) {
@@ -8,11 +8,74 @@
       }
       supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-      const { data: { session } } = await supabaseClient.auth.getSession();
-      if (session) {
-        await onSupabaseLoggedIn(session);
+      // Authサーバーでユーザーを検証する。getSession() のローカル値だけで
+      // 保護された画面を開かない。
+      const { data: { user }, error } = await supabaseClient.auth.getUser();
+      if (user && !error) {
+        const { data: { session } } = await supabaseClient.auth.getSession();
+        if (session) await onSupabaseLoggedIn(session);
+      } else {
+        showLoginGate();
       }
-      // セッションが無ければログインゲートを表示したまま待機（デフォルトで表示済み）
+
+      supabaseClient.auth.onAuthStateChange((event, session) => {
+        // コールバック内で別のSupabase処理をawaitするとデッドロックし得るため、
+        // 次のイベントループで画面状態を同期する。
+        setTimeout(() => {
+          if (event === 'SIGNED_OUT' || !session) {
+            clearAuthenticatedState();
+            showLoginGate();
+          } else if (event === 'SIGNED_IN' && !supabaseUser) {
+            onSupabaseLoggedIn(session);
+          }
+        }, 0);
+      });
+
+      window.addEventListener('hashchange', handleProtectedRouteChange);
+      handleProtectedRouteChange();
+    }
+
+    function showLoginGate(message = '') {
+      const requestedRoute = getRouteFromHash();
+      if (requestedRoute !== 'login') pendingProtectedRoute = requestedRoute;
+      document.getElementById('login-gate').classList.remove('hidden');
+      document.querySelectorAll('.tab-content').forEach(el => el.style.display = 'none');
+      if (message) document.getElementById('login-error').innerText = message;
+      if (location.hash !== '#/login') history.replaceState(null, '', '#/login');
+      setTimeout(() => document.getElementById('login-gate-email')?.focus(), 0);
+    }
+
+    function clearAuthenticatedState() {
+      if (typeof teardownGroupChat === 'function') teardownGroupChat();
+      if (typeof teardownDirectMessages === 'function') teardownDirectMessages();
+      if (typeof teardownAnnouncementUnread === 'function') teardownAnnouncementUnread();
+      if (typeof resetUnreadBadges === 'function') resetUnreadBadges();
+      supabaseUser = null;
+      supabaseMemberId = null;
+      isAdmin = false;
+      document.body.classList.remove('is-admin');
+      closeAppMenu();
+    }
+
+    function handleProtectedRouteChange() {
+      const route = getRouteFromHash();
+      if (!supabaseUser) {
+        if (route !== 'login') pendingProtectedRoute = route;
+        showLoginGate();
+        return;
+      }
+      if (route === 'login') {
+        navigateTo(routeToTab(pendingProtectedRoute || 'dashboard'), { replace: true });
+        pendingProtectedRoute = null;
+        return;
+      }
+      const tabId = routeToTab(route);
+      if (!tabId || (tabId === 'tab-score' && !isAdmin)) {
+        navigateTo('tab-dashboard', { replace: true });
+        if (tabId === 'tab-score' && !isAdmin) showToast('この画面は管理者のみ利用できます。');
+        return;
+      }
+      navigateTo(tabId, { fromRoute: true, replace: route !== tabToRoute(tabId) });
     }
 
     async function handleSupabaseLogin() {
@@ -24,6 +87,11 @@
 
       if (!email || !password) {
         errorEl.innerText = 'メールアドレスとパスワードを入力してください。';
+        return;
+      }
+
+      if (!supabaseClient) {
+        errorEl.innerText = '認証サービスを初期化しています。少し待ってから再試行してください。';
         return;
       }
 
@@ -68,9 +136,14 @@
 
       // ログインゲートを閉じてアプリ本体を起動
       document.getElementById('login-gate').classList.add('hidden');
-      fetchData();
+      const destination = pendingProtectedRoute || (getRouteFromHash() === 'login' ? 'dashboard' : getRouteFromHash());
+      pendingProtectedRoute = null;
+      fetchData(() => navigateTo(routeToTab(destination) || 'tab-dashboard', { replace: true }));
       refreshPendingRequestBadge();
       checkPushSubscriptionState();
+      if (typeof initGroupChat === 'function') initGroupChat();
+      if (typeof initDirectMessages === 'function') initDirectMessages();
+      if (typeof initAnnouncementUnread === 'function') initAnnouncementUnread();
     }
 
     function renderAccountButton() {
@@ -88,8 +161,13 @@
     }
 
     async function handleSupabaseLogout() {
-      await supabaseClient.auth.signOut();
-      location.reload();
+      const { error } = await supabaseClient.auth.signOut();
+      if (error) {
+        showToast('ログアウトに失敗しました。通信状態を確認してください。');
+        return;
+      }
+      clearAuthenticatedState();
+      showLoginGate('ログアウトしました。');
     }
 
     // メンバー名・備考等をinnerHTMLに埋め込む際の簡易エスケープ

@@ -334,5 +334,6 @@
       renderHistory();
       renderRanking();
       renderDashboard();
+      if (typeof refreshDirectMessageOverview === 'function' && supabaseMemberId) refreshDirectMessageOverview();
     }
 

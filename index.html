@@ -34,7 +34,7 @@
       </div>
       <p style="font-size: 13px; color: #94a3b8; margin: 0 0 16px 0;">ログインしてください</p>
       <input type="email" id="login-gate-email" placeholder="メールアドレス" autocomplete="username">
-      <input type="password" id="login-gate-password" placeholder="パスワード" autocomplete="current-password">
+      <input type="password" id="login-gate-password" placeholder="パスワード" autocomplete="current-password" onkeydown="if(event.key === 'Enter') handleSupabaseLogin()">
       <button class="btn btn-primary btn-block" id="login-gate-btn" onclick="handleSupabaseLogin()">ログイン</button>
       <div id="login-error"></div>
     </div>
@@ -44,13 +44,17 @@
   <!-- ヘッダー -->
   <div class="header">
     <button class="header-title header-home" onclick="navigateTo('tab-dashboard')" aria-label="ダッシュボードへ戻る"><img src="images/header-logo.png" alt="OMB - Oshima Monday Bowling" style="height:96px; display:block;"></button>
-    <button class="menu-toggle" onclick="toggleAppMenu()" aria-label="メニューを開く" aria-controls="app-menu" aria-expanded="false">☰</button>
+    <button class="menu-toggle" onclick="toggleAppMenu()" aria-label="メニューを開く" aria-controls="app-menu" aria-expanded="false">☰<span id="total-unread-badge" class="header-unread-badge" style="display:none;"></span></button>
   </div>
 
   <div id="menu-backdrop" class="menu-backdrop" onclick="closeAppMenu()"></div>
   <aside id="app-menu" class="app-menu" aria-hidden="true">
     <div class="app-menu-header"><strong>メニュー</strong><button onclick="closeAppMenu()" aria-label="閉じる">×</button></div>
     <button onclick="navigateTo('tab-dashboard')">🏠 ダッシュボード</button>
+    <button onclick="navigateTo('tab-announcements')">📢 お知らせ <span id="announcement-unread-badge" class="menu-count" style="display:none;"></span></button>
+    <button onclick="navigateTo('tab-schedule')">📅 予定・出欠</button>
+    <button onclick="navigateTo('tab-chat')">💬 全体チャット <span id="chat-unread-badge" class="menu-count" style="display:none;"></span></button>
+    <button onclick="navigateTo('tab-direct-messages')">✉️ 個別メッセージ <span id="direct-message-unread-badge" class="menu-count" style="display:none;"></span></button>
     <button onclick="openScoreRequestModal(); closeAppMenu();">🎳 スコア入力</button>
     <button onclick="navigateTo('tab-ranking')">🏆 ランキング</button>
     <button onclick="navigateTo('tab-vault')">🎟️ 回数券残量・購入</button>
@@ -60,7 +64,7 @@
       <button onclick="navigateTo('tab-score')">📝 一括スコア入力</button>
       <button onclick="openAdminSettings(); closeAppMenu();">⚙️ 管理設定</button>
     </div>
-    <button id="push-notification-btn" onclick="enablePushNotifications(); closeAppMenu();">🔔 通知設定</button>
+    <button id="push-notification-btn" onclick="openNotificationSettings(); closeAppMenu();">🔔 通知設定</button>
     <button class="app-menu-logout" onclick="handleSupabaseLogout()">🚪 ログアウト</button>
   </aside>
 
@@ -71,7 +75,7 @@
     </div>
 
     <div id="tab-dashboard" class="tab-content" style="display:none;">
-      <div id="dashboard-viewing-banner" class="dashboard-viewing-banner"><span>👤 <b id="dashboard-viewing-name"></b>さんのダッシュボード</span><button onclick="navigateTo('tab-members')">メンバー一覧へ戻る</button></div>
+      <div id="dashboard-viewing-banner" class="dashboard-viewing-banner"><button onclick="navigateTo('tab-dashboard')">閉じる ×</button></div>
       <section class="dashboard-admin admin-only">
         <button class="dashboard-admin-summary" onclick="toggleDashboardAdmin()" aria-expanded="false">
           <span><b>管理メニュー</b><small id="dashboard-admin-summary">承認待ちを確認中...</small></span><span id="dashboard-admin-chevron">⌄</span>
@@ -82,10 +86,19 @@
           <button onclick="navigateTo('tab-members')"><span>👥 メンバー残量一覧</span><span>›</span></button>
         </div>
       </section>
-
       <section class="dashboard-hero">
-        <div class="dashboard-user"><div class="dashboard-avatar-wrap"><button id="dashboard-avatar" class="dashboard-avatar" onclick="openDashboardAvatarPicker()" title="プロフィール画像を変更" aria-label="プロフィール画像を変更"></button><span id="dashboard-equipped-badge" class="dashboard-equipped-badge"></span></div><div><small id="dashboard-welcome-label">Welcome back</small><h2 id="dashboard-name">こんにちは</h2></div></div>
+        <div class="dashboard-user"><div class="dashboard-avatar-wrap"><button id="dashboard-avatar" class="dashboard-avatar" onclick="openDashboardAvatarPicker()" title="プロフィール画像を変更" aria-label="プロフィール画像を変更"></button><span id="dashboard-equipped-badge" class="dashboard-equipped-badge"></span></div><div><small id="dashboard-welcome-label">Welcome back</small><span class="dashboard-name-row"><h2 id="dashboard-name">こんにちは</h2><button id="dashboard-member-message-button" class="dashboard-member-message-button" aria-label="個別メッセージを送る" title="個別メッセージを送る"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4h16v12H8l-4 4V4Zm3 4v2h10V8H7Zm0 4v2h7v-2H7Z"/></svg></button></span></div></div>
         <button class="dashboard-score-cta" onclick="openScoreRequestModal()"><span class="score-cta-icon" aria-hidden="true"><i></i></span><span class="score-cta-copy"><small>NEW SCORE</small><b>スコアを入力する</b><em>結果票の読み取り・手入力</em></span><span class="score-cta-arrow">→</span></button>
+      </section>
+
+      <section id="dashboard-announcement-card" class="dashboard-card dashboard-announcement-card" style="display:none;">
+        <div class="dashboard-section-heading"><span><small>INFORMATION</small><b>最新のお知らせ</b></span><button class="announcement-text-link" onclick="navigateTo('tab-announcements')">一覧へ ›</button></div>
+        <button id="dashboard-announcement-latest" class="dashboard-announcement-latest" onclick="navigateTo('tab-announcements')"></button>
+      </section>
+
+      <section id="dashboard-schedule-card" class="dashboard-card dashboard-schedule-card" style="display:none;">
+        <div class="dashboard-section-heading"><span><small>NEXT SCHEDULE</small><b>次回の予定</b></span><button class="announcement-text-link" onclick="navigateTo('tab-schedule')">一覧へ ›</button></div>
+        <button id="dashboard-schedule-next" class="dashboard-schedule-next" onclick="navigateTo('tab-schedule')"></button>
       </section>
 
       <section class="dashboard-card dashboard-performance dashboard-performance-link" role="button" tabindex="0" aria-label="過去のスコア履歴を開く" onclick="openDashboardHistoryPopup()" onkeydown="if(event.key === 'Enter' || event.key === ' '){ event.preventDefault(); openDashboardHistoryPopup(); }">
@@ -120,6 +133,14 @@
           <div id="dashboard-achievement-summary" class="dashboard-achievement-summary"></div><span class="dashboard-card-more">一覧を開く ›</span>
         </button>
       </div>
+      <section id="dashboard-direct-history-card" class="dashboard-card dashboard-direct-history-card">
+        <div class="dashboard-section-heading"><span><small>DIRECT MESSAGE</small><b>個別メッセージ履歴</b></span><button class="announcement-text-link" onclick="navigateTo('tab-direct-messages')">一覧へ ›</button></div>
+        <div id="dashboard-direct-history" class="dashboard-direct-history"><span class="dashboard-chat-empty">読み込み中...</span></div>
+      </section>
+      <section id="dashboard-chat-card" class="dashboard-card dashboard-chat-card">
+        <div class="dashboard-section-heading"><span><small>GROUP CHAT</small><b>最近のチャット</b></span><button class="announcement-text-link" onclick="navigateTo('tab-chat')">チャットを開く ›</button></div>
+        <button id="dashboard-chat-latest" class="dashboard-chat-latest" onclick="navigateTo('tab-chat')"><span class="dashboard-chat-empty">読み込み中...</span></button>
+      </section>
       <section class="dashboard-card dashboard-member-carousel-card">
         <div class="dashboard-card-title dashboard-member-carousel-heading"><span><small>MEMBERS</small><b>メンバー</b></span><small>横にスワイプ</small></div>
         <div id="dashboard-member-carousel" class="dashboard-member-carousel" aria-label="メンバー一覧"></div>
@@ -298,11 +319,81 @@
     <div id="tab-members" class="tab-content" style="display: none;">
       <div class="card" id="member-management-list"></div>
     </div>
+
+    <div id="tab-announcements" class="tab-content" style="display:none;">
+      <div class="page-heading-row">
+        <div><small>INFORMATION</small><h2>📢 お知らせ</h2></div>
+        <button class="btn btn-primary btn-sm admin-only" onclick="openAnnouncementEditor()">+ 新規作成</button>
+      </div>
+      <p class="announcement-page-note">休み・会場変更・イベントなど、大切な連絡を確認できます。</p>
+      <div id="announcement-list" class="announcement-list"><div class="announcement-empty">読み込み中...</div></div>
+    </div>
+
+    <div id="tab-schedule" class="tab-content" style="display:none;">
+      <div class="page-heading-row">
+        <div><small>SCHEDULE</small><h2>📅 予定・出欠</h2></div>
+        <div class="schedule-heading-actions admin-only"><button class="btn btn-primary btn-sm" onclick="openScheduleEditor()">+ 臨時予定を作成</button></div>
+      </div>
+      <p class="announcement-page-note">定例の「月曜会」は現在日から2か月先まで自動登録されます。忘年会などの臨時予定もここで確認できます。</p>
+      <div class="schedule-filter"><button id="schedule-filter-upcoming" class="active" onclick="setScheduleFilter('upcoming')">今後の予定</button><button id="schedule-filter-past" onclick="setScheduleFilter('past')">過去の予定</button></div>
+      <div id="schedule-list" class="schedule-list"><div class="announcement-empty">読み込み中...</div></div>
+    </div>
+
+    <div id="tab-chat" class="tab-content" style="display:none;">
+      <div class="page-heading-row">
+        <div><small>GROUP CHAT</small><h2>💬 全体チャット</h2></div>
+      </div>
+      <p class="announcement-page-note">メンバー全員が見られるチャットです。</p>
+      <section class="chat-shell">
+        <button id="chat-load-more" class="chat-load-more" onclick="loadGroupChat(false)" style="display:none;">過去のメッセージを表示</button>
+        <div id="chat-message-list" class="chat-message-list" aria-live="polite"><div class="chat-empty">読み込み中...</div></div>
+        <button id="chat-new-message" class="chat-new-message" onclick="scrollGroupChatToBottom()" style="display:none;">↓ 新しいメッセージ</button>
+        <form class="chat-composer" onsubmit="sendGroupMessage(event)">
+          <textarea id="chat-message-input" rows="1" maxlength="1000" placeholder="メッセージを入力" aria-label="メッセージ" oninput="autoResizeChatInput(this)" onkeydown="handleChatComposerKeydown(event)"></textarea>
+          <button id="chat-send-btn" type="submit">送信</button>
+        </form>
+      </section>
+    </div>
+
+    <div id="tab-direct-messages" class="tab-content" style="display:none;">
+      <div class="page-heading-row"><div><small>DIRECT MESSAGE</small><h2>✉️ 個別メッセージ</h2></div></div>
+      <p class="announcement-page-note">選んだ相手とだけ見られるメッセージです。</p>
+      <section id="direct-message-layout" class="direct-message-layout">
+        <aside class="direct-member-panel">
+          <h3>メンバー</h3>
+          <div id="direct-member-list" class="direct-member-list"><div class="chat-empty">読み込み中...</div></div>
+        </aside>
+        <div class="direct-conversation-panel">
+          <header class="direct-conversation-header"><button class="direct-back" onclick="closeDirectConversation()" aria-label="メンバー一覧へ戻る">‹</button><span id="direct-conversation-person">相手を選択してください</span></header>
+          <button id="direct-load-more" class="chat-load-more" onclick="loadDirectConversation(false)" style="display:none;">過去のメッセージを表示</button>
+          <div id="direct-message-list" class="direct-message-list" aria-live="polite"><div class="direct-conversation-placeholder">メンバーを選ぶと<br>個別メッセージを開始できます。</div></div>
+          <form id="direct-composer" class="chat-composer" onsubmit="sendDirectMessage(event)" style="display:none;">
+            <textarea id="direct-message-input" rows="1" maxlength="1000" placeholder="メッセージを入力" aria-label="個別メッセージ" oninput="autoResizeChatInput(this)" onkeydown="handleDirectMessageKeydown(event)"></textarea>
+            <button id="direct-send-btn" type="submit">送信</button>
+          </form>
+        </div>
+      </section>
+    </div>
   </div>
 
   <div id="toast-container"></div>
 
   <!-- モーダルダイアログ群 -->
+  <div id="modal-notification-settings" class="modal">
+    <div class="modal-content notification-settings-modal">
+      <div class="modal-heading-row"><h3>🔔 通知設定</h3><button class="modal-close-x" onclick="closeModal('modal-notification-settings')" aria-label="閉じる">×</button></div>
+      <div class="notification-device-row"><span><b>この端末のプッシュ通知</b><small id="notification-device-status">確認中...</small></span><button id="notification-device-toggle" class="btn btn-secondary btn-sm" onclick="togglePushNotificationsFromSettings()">設定</button></div>
+      <div class="notification-setting-list">
+        <label class="notification-switch master"><span><b>通知を受け取る</b><small>アカウント全体の通知</small></span><input type="checkbox" id="notification-pref-enabled" onchange="syncNotificationPreferenceControls()"><i></i></label>
+        <label class="notification-switch"><span><b>📢 お知らせ</b><small>管理者からのお知らせ</small></span><input type="checkbox" id="notification-pref-announcements"><i></i></label>
+        <label class="notification-switch"><span><b>💬 全体チャット</b><small>新しいグループメッセージ</small></span><input type="checkbox" id="notification-pref-group-chat"><i></i></label>
+        <label class="notification-switch"><span><b>✉️ 個別メッセージ</b><small>自分宛てのメッセージ</small></span><input type="checkbox" id="notification-pref-direct"><i></i></label>
+        <label class="notification-switch"><span><b>⏳ 予定リマインド</b><small>回答期限24時間以内・期限超過</small></span><input type="checkbox" id="notification-pref-schedule"><i></i></label>
+      </div>
+      <div class="modal-actions"><button class="btn btn-secondary" onclick="closeModal('modal-notification-settings')">キャンセル</button><button id="notification-settings-save" class="btn btn-success" onclick="saveNotificationSettings()">保存</button></div>
+    </div>
+  </div>
+
   <div id="modal-ranking-info" class="modal" style="z-index: 1600;">
     <div class="modal-content" style="max-width: 340px;">
       <h3 id="ranking-info-title" style="margin-top:0;"></h3>
@@ -310,6 +401,45 @@
       <div style="text-align: right; margin-top: 12px;">
         <button class="btn btn-secondary" onclick="closeModal('modal-ranking-info')">閉じる</button>
       </div>
+    </div>
+  </div>
+
+  <div id="modal-announcement-editor" class="modal">
+    <div class="modal-content">
+      <div class="modal-heading-row"><h3 id="announcement-editor-title">📢 お知らせ作成</h3><button class="modal-close-x" onclick="closeModal('modal-announcement-editor')" aria-label="閉じる">×</button></div>
+      <input type="hidden" id="announcement-id">
+      <label class="form-field"><span>タイトル</span><input id="announcement-title" maxlength="100" placeholder="例: 次回の開催はお休みです"></label>
+      <label class="form-field"><span>本文</span><textarea id="announcement-body" maxlength="5000" rows="7" placeholder="詳細を入力してください"></textarea></label>
+      <div class="announcement-form-grid">
+        <label class="form-field"><span>重要度</span><select id="announcement-priority"><option value="normal">通常</option><option value="important">重要</option><option value="urgent">緊急</option></select></label>
+        <label class="form-field"><span>公開状態</span><select id="announcement-status"><option value="published">公開</option><option value="draft">下書き</option></select></label>
+      </div>
+      <div class="announcement-form-grid">
+        <label class="form-field"><span>公開日時</span><input type="datetime-local" id="announcement-publish-at"></label>
+        <label class="form-field"><span>掲載期限（任意）</span><input type="datetime-local" id="announcement-expires-at"></label>
+      </div>
+      <label class="announcement-check"><input type="checkbox" id="announcement-pinned"> 一覧の先頭に固定する</label>
+      <div class="modal-actions announcement-editor-actions"><button id="announcement-delete-btn" class="btn btn-danger btn-sm" onclick="deleteAnnouncement()" style="display:none;">削除</button><span></span><button class="btn btn-secondary" onclick="closeModal('modal-announcement-editor')">キャンセル</button><button id="announcement-save-btn" class="btn btn-success" onclick="saveAnnouncement()">保存</button></div>
+    </div>
+  </div>
+
+  <div id="modal-schedule-editor" class="modal">
+    <div class="modal-content">
+      <div class="modal-heading-row"><h3 id="schedule-editor-title">📅 予定作成</h3><button class="modal-close-x" onclick="closeModal('modal-schedule-editor')" aria-label="閉じる">×</button></div>
+      <input type="hidden" id="schedule-id">
+      <label class="form-field"><span>タイトル</span><input id="schedule-title" maxlength="100" placeholder="例: 通常練習"></label>
+      <div class="announcement-form-grid">
+        <label class="form-field"><span>種別</span><select id="schedule-type"><option value="bowling">通常ボウリング</option><option value="tournament">大会</option><option value="social">飲み会・イベント</option><option value="other">その他</option></select></label>
+        <label class="form-field"><span>状態</span><select id="schedule-status"><option value="scheduled">開催予定</option><option value="cancelled">中止</option></select></label>
+      </div>
+      <div class="announcement-form-grid">
+        <label class="form-field"><span>開始日時</span><input type="datetime-local" id="schedule-starts-at"></label>
+        <label class="form-field"><span>終了日時（任意）</span><input type="datetime-local" id="schedule-ends-at"></label>
+      </div>
+      <label class="form-field"><span>場所</span><input id="schedule-location" maxlength="200" placeholder="例: 大島ボウル"></label>
+      <label class="form-field"><span>詳細（任意）</span><textarea id="schedule-details" maxlength="3000" rows="4" placeholder="集合時間や持ち物など"></textarea></label>
+      <label class="form-field"><span>回答期限（任意）</span><input type="datetime-local" id="schedule-deadline"></label>
+      <div class="modal-actions announcement-editor-actions"><button id="schedule-delete-btn" class="btn btn-danger btn-sm" onclick="deleteSchedule()" style="display:none;">削除</button><span></span><button class="btn btn-secondary" onclick="closeModal('modal-schedule-editor')">キャンセル</button><button id="schedule-save-btn" class="btn btn-success" onclick="saveSchedule()">保存</button></div>
     </div>
   </div>
 
@@ -653,6 +783,10 @@
   <script src="js/data.js"></script>
   <script src="js/scores.js"></script>
   <script src="js/requests.js?v=708b149"></script>
+  <script src="js/announcements.js"></script>
+  <script src="js/schedule.js"></script>
+  <script src="js/chat.js"></script>
+  <script src="js/direct-messages.js"></script>
   <script src="js/vault.js"></script>
   <script src="js/rankings.js"></script>
   <script src="js/history.js"></script>

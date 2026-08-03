@@ -1,7 +1,7 @@
 // キャッシュのバージョン。index.html等を更新して公開する際は、
 // このバージョン文字列を必ず変更してください（古いキャッシュを破棄し、
 // ユーザー側に更新を届けるための仕組みです）。
-const CACHE_VERSION = 'omb-cache-v45-ios-standalone-width';
+const CACHE_VERSION = 'omb-cache-v74-notification-preferences';
 
 // アプリの外殻（起動に最低限必要なファイル）のみキャッシュ対象とする。
 // Supabaseへの通信やその他の外部APIはキャッシュしない（常に最新のデータを取得する）。
@@ -15,6 +15,10 @@ const APP_SHELL = [
   './js/data.js',
   './js/scores.js',
   './js/requests.js?v=708b149',
+  './js/announcements.js',
+  './js/schedule.js',
+  './js/chat.js',
+  './js/direct-messages.js',
   './js/vault.js',
   './js/rankings.js',
   './js/history.js',
@@ -77,7 +81,7 @@ self.addEventListener('notificationclick', (event) => {
   const targetUrl = new URL(event.notification.data?.url || './', self.location.origin).href;
   event.waitUntil(self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clients) => {
     const existing = clients.find((client) => client.url.startsWith(self.location.origin));
-    return existing ? existing.focus() : self.clients.openWindow(targetUrl);
+    return existing ? existing.navigate(targetUrl).then((client) => client.focus()) : self.clients.openWindow(targetUrl);
   }));
 });
 

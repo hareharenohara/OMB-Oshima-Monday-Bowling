@@ -375,9 +375,12 @@
       if (!error && count > 0) {
         badge.style.display = 'inline-block';
         badge.textContent = count;
+        badge.dataset.count = String(count);
       } else {
         badge.style.display = 'none';
+        badge.dataset.count = '0';
       }
+      if (typeof updateTotalUnreadBadge === 'function') updateTotalUnreadBadge();
       if (typeof refreshDashboardAdminSummary === 'function') refreshDashboardAdminSummary();
     }
 

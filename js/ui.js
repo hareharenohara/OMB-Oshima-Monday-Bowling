@@ -7,11 +7,59 @@
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
 
-    function navigateTo(tabId) {
+    const PROTECTED_ROUTES = Object.freeze({
+      dashboard: 'tab-dashboard',
+      announcements: 'tab-announcements',
+      schedule: 'tab-schedule',
+      chat: 'tab-chat',
+      messages: 'tab-direct-messages',
+      scores: 'tab-score',
+      vault: 'tab-vault',
+      ranking: 'tab-ranking',
+      members: 'tab-members'
+    });
+
+    function getRouteFromHash() {
+      return location.hash.replace(/^#\/?/, '').split(/[?&]/)[0] || (supabaseUser ? 'dashboard' : 'login');
+    }
+
+    function routeToTab(route) {
+      return PROTECTED_ROUTES[route] || null;
+    }
+
+    function tabToRoute(tabId) {
+      return Object.keys(PROTECTED_ROUTES).find(route => PROTECTED_ROUTES[route] === tabId) || 'dashboard';
+    }
+
+    function navigateTo(tabId, options = {}) {
+      if (!supabaseUser) {
+        pendingProtectedRoute = tabToRoute(tabId);
+        showLoginGate();
+        return;
+      }
+      if (tabId === 'tab-score' && !isAdmin) {
+        showToast('この画面は管理者のみ利用できます。');
+        tabId = 'tab-dashboard';
+        options.replace = true;
+      }
+      if (!document.getElementById(tabId)) tabId = 'tab-dashboard';
       if (tabId === 'tab-dashboard') dashboardViewedMemberId = null;
       switchTab(tabId);
       closeAppMenu();
       if (tabId === 'tab-dashboard') renderDashboard();
+      if (tabId === 'tab-announcements' && typeof openAnnouncements === 'function') openAnnouncements();
+      if (tabId === 'tab-schedule' && typeof loadSchedules === 'function') loadSchedules();
+      if (tabId === 'tab-chat' && typeof openGroupChat === 'function') openGroupChat();
+      if (tabId === 'tab-direct-messages' && typeof openDirectMessages === 'function') openDirectMessages();
+      if (!options.fromRoute) {
+        const hash = `#/${tabToRoute(tabId)}`;
+        if (location.hash !== hash) {
+          if (options.replace) history.replaceState(null, '', hash);
+          else location.hash = hash;
+        }
+      } else if (options.replace) {
+        history.replaceState(null, '', `#/${tabToRoute(tabId)}`);
+      }
     }
 
     function toggleAppMenu() {

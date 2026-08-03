@@ -14,6 +14,7 @@ let appData = {};
     let supabaseClient = null;
     let supabaseUser = null;      // ログイン中のSupabase authユーザー
     let supabaseMemberId = null;  // membersテーブルと紐付いたID
+    let pendingProtectedRoute = null;
 
 // 全32種類のアチーブメント定義 (ユニークアイコン版)
     const ACHIEVEMENTS = [

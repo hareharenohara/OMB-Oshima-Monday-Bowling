@@ -58,8 +58,12 @@ function renderDashboard() {
   currentProfileMemberId = memberId;
   const dashboard = document.getElementById('tab-dashboard');
   dashboard.classList.toggle('member-dashboard', !isOwnDashboard);
-  document.getElementById('dashboard-viewing-name').textContent = member.name;
+  const adminMenu = dashboard.querySelector('.dashboard-admin');
+  if (adminMenu) adminMenu.style.setProperty('display', isOwnDashboard ? '' : 'none', isOwnDashboard ? '' : 'important');
   document.getElementById('dashboard-welcome-label').textContent = isOwnDashboard ? 'Welcome back' : 'MEMBER PERFORMANCE';
+  const memberMessageButton = document.getElementById('dashboard-member-message-button');
+  memberMessageButton.style.display = isOwnDashboard ? 'none' : 'inline-flex';
+  memberMessageButton.onclick = isOwnDashboard ? null : () => openDirectConversationFromDashboard(memberId);
   const avatarButton = document.getElementById('dashboard-avatar');
   avatarButton.disabled = !isOwnDashboard;
   avatarButton.title = isOwnDashboard ? 'プロフィール画像を変更' : '';
@@ -115,6 +119,10 @@ function renderDashboard() {
   renderDashboardMedals(memberId);
   renderDashboardAchievements(member, stats);
   renderDashboardMemberCarousel();
+  if (typeof renderDashboardAnnouncement === 'function') renderDashboardAnnouncement();
+  if (typeof renderDashboardSchedule === 'function') renderDashboardSchedule();
+  if (typeof renderDashboardChat === 'function') renderDashboardChat();
+  if (typeof renderDashboardDirectMessages === 'function') renderDashboardDirectMessages(isOwnDashboard, memberId);
   if (isAdmin) refreshDashboardAdminSummary();
 }
 
