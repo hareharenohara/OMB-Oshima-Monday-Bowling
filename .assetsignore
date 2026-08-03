@@ -1,0 +1,9 @@
+.git
+.github
+.codex
+.agents
+supabase
+docs
+README.md
+wrangler.jsonc
+.assetsignore
