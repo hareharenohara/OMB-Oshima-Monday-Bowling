@@ -74,17 +74,19 @@
           const g3 = scoreByNum[3] ?? null;
           const g4 = scoreByNum[4] ?? null;
           const g5 = scoreByNum[5] ?? null;
-          const totalScore = (row.games || []).reduce((sum, g) => sum + (Number(g.score) || 0), 0);
+          const orderedGames = (row.games || []).slice().sort((a, b) => a.game_number - b.game_number);
+          const scores = orderedGames.map(g => Number(g.score) || 0);
+          const totalScore = scores.reduce((sum, score) => sum + score, 0);
 
           const s = stats[row.member_id];
           if (s) {
             s.totalGameCount += row.game_count;
             s.totalScore += totalScore;
-            [g1, g2, g3, g4, g5].filter(g => g !== null && g > 0).forEach(g => {
+            scores.filter(g => g > 0).forEach(g => {
               s.scoresArray.push(g);
               if (g > s.highScore) s.highScore = g;
             });
-            s.gamesDetailArray.push({ date: row.date, g1, g2, g3, g4, g5, totalScore, gameCount: row.game_count });
+            s.gamesDetailArray.push({ date: row.date, g1, g2, g3, g4, g5, scores, totalScore, gameCount: row.game_count });
           }
 
           const gamesDetail = (row.games || [])
@@ -108,6 +110,7 @@
             gameCount: row.game_count,
             g1, g2, g3, g4, g5,
             totalScore,
+            scores,
             games: gamesDetail
           };
         });
@@ -131,7 +134,7 @@
           const sortedGames = [...s.gamesDetailArray].sort((a, b) => new Date(a.date) - new Date(b.date));
           const chronoScores = [];
           sortedGames.forEach(g => {
-            [g.g1, g.g2, g.g3, g.g4, g.g5].forEach(v => { if (v !== null && v !== undefined && v > 0) chronoScores.push(v); });
+            (g.scores || [g.g1, g.g2, g.g3, g.g4, g.g5]).forEach(v => { if (v !== null && v !== undefined && v > 0) chronoScores.push(v); });
           });
           const recentScores = chronoScores.slice(-15);
           s.recent15Avg = recentScores.length > 0 ? (recentScores.reduce((a, b) => a + b, 0) / recentScores.length) : 0;
@@ -180,12 +183,7 @@
           return { success: false, message: sessErr.message };
         }
 
-        const gameDefs = [];
-        [r.g1, r.g2, r.g3, r.g4, r.g5].forEach((score, idx) => {
-          if (score !== null && score !== undefined && score !== '') {
-            gameDefs.push({ gameNumber: idx + 1, score: score });
-          }
-        });
+        const gameDefs = (r.games || []).filter(g => g.score !== null && g.score !== undefined && g.score !== '');
 
         for (const gd of gameDefs) {
           const { data: gameRow, error: gameErr } = await supabaseClient
@@ -223,12 +221,9 @@
       const { error: delErr } = await supabaseClient.from('games').delete().eq('session_id', record.id);
       if (delErr) return { success: false, message: delErr.message };
 
-      const gameRows = [];
-      [record.g1, record.g2, record.g3, record.g4, record.g5].forEach((score, idx) => {
-        if (score !== null && score !== undefined && score !== '') {
-          gameRows.push({ session_id: record.id, game_number: idx + 1, score: score });
-        }
-      });
+      const gameRows = (record.games || [])
+        .filter(game => game.score !== null && game.score !== undefined && game.score !== '')
+        .map(game => ({ session_id: record.id, game_number: game.gameNumber, score: game.score }));
       if (gameRows.length > 0) {
         const { error: insErr } = await supabaseClient.from('games').insert(gameRows);
         if (insErr) return { success: false, message: insErr.message };

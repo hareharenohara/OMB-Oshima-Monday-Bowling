@@ -29,16 +29,9 @@
           <span class="scan-status-text" id="scan-status-${key}"></span>
           <input type="file" accept="image/*" capture="environment" id="scan-file-${key}" style="display:none;" onchange="handleScorePhotoSelected('${key}', this)">
         </div>
+        <p style="margin:0 0 8px; color:#94a3b8; font-size:11px;">画像読み取りは1日5回まで利用できます。手入力には回数制限はありません。</p>
         <div style="display:flex; justify-content:space-between; align-items:center; font-size:12px; margin-bottom:8px;">
-          <span>投球G数:
-            <select id="gc-${key}" onchange="updateGameSlots('${key}')" style="padding:2px 4px;">
-              <option value="1">1 G</option>
-              <option value="2">2 G</option>
-              <option value="3" selected>3 G</option>
-              <option value="4">4 G</option>
-              <option value="5">5 G</option>
-            </select>
-          </span>
+          <label>投球G数: <input type="number" id="gc-${key}" min="1" step="1" value="3" inputmode="numeric" onchange="updateGameSlots('${key}')" style="width:64px; padding:2px 4px;"> G</label>
         </div>
         <div class="score-table" id="score-table-${key}"></div>
         <div id="calc-result-${key}" style="text-align:right; font-size:12px; font-weight:bold; margin-top:6px; color:#38bdf8;"></div>
@@ -76,6 +69,8 @@
       const mId = supabaseMemberId;
       if (!mId) return showToast('ログイン情報を取得できませんでした');
       const key = reqKey(mId);
+      const requestImage = pendingScanImages[key];
+      if (!requestImage) return showToast('申請には結果票の画像が必要です。写真を撮影して範囲を確認してください。');
 
       const date = document.getElementById('score-request-date').value;
       if (!date) return showToast('実施日を入力してください');
@@ -93,17 +88,33 @@
       }
 
       document.getElementById('loading').style.display = 'block';
+      const { data: userData } = await supabaseClient.auth.getUser();
+      const authUserId = userData?.user?.id;
+      if (!authUserId) {
+        document.getElementById('loading').style.display = 'none';
+        return showToast('ログイン情報を取得できませんでした');
+      }
+      const imagePath = `${authUserId}/${crypto.randomUUID()}.jpg`;
+      const { error: uploadError } = await supabaseClient.storage.from('score-request-images').upload(imagePath, requestImage, {
+        contentType: 'image/jpeg', cacheControl: '3600', upsert: false
+      });
+      if (uploadError) {
+        document.getElementById('loading').style.display = 'none';
+        return showToast('結果票画像の保存に失敗しました: ' + uploadError.message);
+      }
       const { error } = await supabaseClient.from('requests').insert({
         type: 'score',
         member_id: mId,
         status: 'pending',
         date: date,
         games: games,
-        source: 'photo'
+        source: 'photo',
+        image_path: imagePath
       });
       document.getElementById('loading').style.display = 'none';
 
       if (error) {
+        await supabaseClient.storage.from('score-request-images').remove([imagePath]);
         if (error.code === '23505') {
           return showToast('この日の申請が既に存在します。修正は管理者に依頼してください。');
         }
@@ -113,6 +124,7 @@
       showToast('申請を送信しました。管理者の承認をお待ちください。');
       notifyRequestEvent('admins', null, 'score-submitted');
       delete scannedFrameData[key];
+      delete pendingScanImages[key];
       closeModal('modal-score-request');
     }
 
@@ -199,7 +211,7 @@
 
       const { data, error } = await supabaseClient
         .from('requests')
-        .select('id, date, games, source, created_at, member_id')
+        .select('id, date, games, source, image_path, created_at, member_id')
         .eq('type', 'score')
         .eq('status', 'pending')
         .order('created_at', { ascending: true });
@@ -214,8 +226,13 @@
       }
 
       const memberNames = await loadRequestMemberNames(data);
+      const signedUrls = await Promise.all(data.map(async req => {
+        if (!req.image_path) return null;
+        const { data: signed } = await supabaseClient.storage.from('score-request-images').createSignedUrl(req.image_path, 600);
+        return signed?.signedUrl || null;
+      }));
 
-      container.innerHTML = data.map(req => {
+      container.innerHTML = data.map((req, requestIndex) => {
         const memberName = memberNames[req.member_id] || '(不明なメンバー)';
         const gamesHtml = (req.games || []).map(g => {
           const frames = normalizeFrames(g.frames);
@@ -232,6 +249,9 @@
               <b>${escapeHtml(memberName)}</b>
               <span style="font-size:12px; color:#aaa;">${escapeHtml(req.date || '')}</span>
             </div>
+            <div class="request-compare-label">実際のスコア表</div>
+            ${signedUrls[requestIndex] ? `<img class="request-slip-image" src="${escapeHtml(signedUrls[requestIndex])}" alt="${escapeHtml(memberName)}さんの結果票">` : '<p style="color:#fbbf24;font-size:12px;">添付画像がありません</p>'}
+            <div class="request-compare-label">申請された読み取り結果</div>
             ${gamesHtml}
             <div style="display:flex; justify-content:flex-end; gap:8px; margin-top:8px;">
               <button class="btn btn-danger btn-sm" onclick="rejectScoreRequest('${req.id}')">却下</button>
@@ -319,11 +339,10 @@
         date: req.date,
         memberId: req.member_id,
         gameCount: games.length,
-        g1: null, g2: null, g3: null, g4: null, g5: null,
+        games: games.map(g => ({ gameNumber: g.game_number, score: g.score })),
         frames: {}
       };
       games.forEach(g => {
-        record['g' + g.game_number] = g.score;
         record.frames[g.game_number] = { frames: g.frames || [], total: g.score };
       });
 

@@ -460,6 +460,13 @@
     .scan-status-text.err { color: #f87171; }
     .scan-status-text.ok { color: #4ade80; }
     .scan-preview-thumb { width: 36px; height: 36px; object-fit: cover; border-radius: 6px; border: 1px solid #444; display: none; }
+    .crop-modal-content { max-width:640px; }
+    .crop-help { margin:-5px 0 10px; color:#94a3b8; font-size:12px; }
+    .crop-canvas-wrap { overflow:hidden; border:1px solid #334155; border-radius:10px; background:#080b10; touch-action:none; }
+    #score-crop-canvas { display:block; width:100%; max-height:62vh; touch-action:none; cursor:crosshair; }
+    .crop-actions { display:flex; gap:8px; margin-top:10px; }
+    .request-slip-image { display:block; width:100%; max-height:420px; margin:10px 0; object-fit:contain; border:1px solid #475569; border-radius:10px; background:#0f172a; }
+    .request-compare-label { margin-top:10px; color:#7dd3fc; font-size:11px; font-weight:bold; }
     .input-box-wrap { position: relative; }
     .frame-badge { display: none; position: absolute; top: -6px; right: -2px; cursor: pointer; font-size: 13px; background: #1e1e1e; border: 1px solid #7c3aed; border-radius: 50%; width: 18px; height: 18px; line-height: 16px; text-align: center; }
     .scoreboard-strip { display: grid; grid-template-columns: repeat(9, 1fr) 1.5fr; gap: 2px; width: 100%; margin-bottom: 10px; background: #000; border: 1px solid #444; border-radius: 6px; overflow: hidden; }
@@ -1017,3 +1024,5 @@
       .direct-member-list { max-height:none; }
       .direct-message-list { height:55vh; min-height:350px; }
     }
+    /* 回数券管理は再開までデータを保持したままUIのみ停止 */
+    .ticket-feature { display:none !important; }

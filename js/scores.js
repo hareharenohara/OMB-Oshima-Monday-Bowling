@@ -24,19 +24,14 @@
     function renderScoreInputList() {
       const container = document.getElementById('score-member-list');
       container.innerHTML = '';
-      let lowBalanceHtml = '';
 
       const attendanceRates = computeAttendanceRates();
       const sortedMembers = [...appData.members].sort((a, b) => attendanceRates[b.id] - attendanceRates[a.id]);
 
       sortedMembers.forEach(member => {
         const stats = appData.stats[member.id] || { recent15Avg: 0, totalAvg: 0, highScore: 0, totalGameCount: 0, remainingGames: 0 };
-        const badgeClass = stats.remainingGames <= 3 ? 'badge-red' : 'badge-green';
         const equippedIcon = getAchievementIcon(member.equipped);
 
-        if (stats.remainingGames <= 3) {
-          lowBalanceHtml += `<li>${escapeHtml(member.name)} (残り ${stats.remainingGames} G)</li>`;
-        }
 
         let arrow = '➔';
         let arrowColor = '#aaa';
@@ -61,7 +56,6 @@
               <span style="margin-left: 2px;">${escapeHtml(member.name)}</span>
             </label>
             <div style="display:flex; align-items:center; gap:6px;">
-              <span class="badge ${badgeClass}">残 ${stats.remainingGames} G</span>
               <button class="btn btn-secondary btn-sm" onclick="openMemberDashboard('${member.id}')">詳細</button>
             </div>
           </div>
@@ -73,16 +67,7 @@
               <input type="file" accept="image/*" capture="environment" id="scan-file-${member.id}" style="display:none;" onchange="handleScorePhotoSelected('${member.id}', this)">
             </div>
             <div style="display:flex; justify-content:space-between; align-items:center; font-size:12px; margin-bottom:8px;">
-              <span>投球G数: 
-                <select id="gc-${member.id}" onchange="updatePreview('${member.id}'); updateGameSlots('${member.id}')" style="padding:2px 4px;">
-                  <option value="1">1 G</option>
-                  <option value="2">2 G</option>
-                  <option value="3" selected>3 G</option>
-                  <option value="4">4 G</option>
-                  <option value="5">5 G</option>
-                </select>
-              </span>
-              <button class="btn btn-success btn-sm admin-only" onclick="showChargeModal('', '${member.id}', '${member.name}')">🎟️ 回数券追加</button>
+              <label>投球G数: <input type="number" id="gc-${member.id}" min="1" step="1" value="3" inputmode="numeric" onchange="updatePreview('${member.id}'); updateGameSlots('${member.id}')" style="width:64px; padding:2px 4px;"> G</label>
             </div>
             <div class="score-table" id="score-table-${member.id}"></div>
             <div id="calc-result-${member.id}" style="text-align:right; font-size:12px; font-weight:bold; margin-top:6px; color:#38bdf8;"></div>
@@ -92,12 +77,7 @@
         renderScoreTable(member.id);
       });
 
-      const alertArea = document.getElementById('alert-area');
-      if (lowBalanceHtml !== '') {
-        alertArea.innerHTML = `<div class="card" style="border-color:#dc2626;"><b style="font-size:13px; color:#f87171;">⚠️ 回数券残数が少ないメンバー</b><ul style="margin:4px 0; padding-left:20px; font-size:12px; color:#f87171;">${lowBalanceHtml}</ul></div>`;
-      } else {
-        alertArea.innerHTML = '';
-      }
+      document.getElementById('alert-area').innerHTML = '';
       applyHideAbsentFilter();
     }
 
@@ -123,14 +103,13 @@
 
     function updatePreview(memberId) {
       const gc = parseInt(document.getElementById(`gc-${memberId}`).value) || 0;
-      const stats = appData.stats[memberId] || { remainingGames: 0 };
-      const rem = stats.remainingGames - gc;
-      document.getElementById(`calc-result-${memberId}`).innerText = `消化後残数: ${rem} G`;
+      document.getElementById(`calc-result-${memberId}`).innerText = `${gc}ゲーム入力`;
     }
 
-    // 投球G数の選択に応じて4G/5G目の入力欄の表示・非表示を切り替える
+    // 投球G数に応じて必要な数だけ入力欄を生成する（上限なし）
     function updateGameSlots(memberId) {
-      const gc = parseInt(document.getElementById(`gc-${memberId}`).value) || 3;
+      const gc = Math.max(1, parseInt(document.getElementById(`gc-${memberId}`).value) || 3);
+      document.getElementById(`gc-${memberId}`).value = gc;
       // 表示するゲーム数より多い分のフレームデータは削除しておく
       if (scannedFrameData[memberId]) {
         Object.keys(scannedFrameData[memberId]).forEach(gn => {
@@ -192,6 +171,8 @@
        --------------------------------------------------------- */
     // scannedFrameData[memberId][gameNumber] = { frames: [10要素], total: 数値|null }
     const scannedFrameData = {};
+    const pendingScanImages = {};
+    let scoreCropState = null;
 
     function triggerScorePhoto(memberId) {
       document.getElementById(`scan-file-${memberId}`).click();
@@ -209,35 +190,120 @@
 
       const reader = new FileReader();
       reader.onload = (e) => {
-        const thumb = document.getElementById(`scan-thumb-${memberId}`);
-        thumb.src = e.target.result;
-        thumb.style.display = 'inline-block';
-        setScanStatus(memberId, '画像を最適化中...');
-
         const img = new Image();
-        img.onload = () => {
-          const scale = Math.min(1, 1200 / img.naturalWidth);
-          const w = Math.max(1, Math.round(img.naturalWidth * scale));
-          const h = Math.max(1, Math.round(img.naturalHeight * scale));
-          const c = document.createElement('canvas');
-          c.width = w; c.height = h;
-          c.getContext('2d').drawImage(img, 0, 0, w, h);
-          const resizedDataUrl = c.toDataURL('image/jpeg', 0.85);
-          const base64 = resizedDataUrl.split(',')[1];
-          scanPersonalSlip(memberId, base64, 'image/jpeg');
-        };
+        img.onload = () => openScoreCropEditor(memberId, img);
         img.src = e.target.result;
       };
       reader.readAsDataURL(file);
       inputEl.value = ''; // 同じファイルを連続選択できるようにリセット
     }
 
-    async function scanPersonalSlip(memberId, base64, mime) {
-      setScanStatus(memberId, '読み取り中...');
+    function openScoreCropEditor(memberId, image) {
+      const canvas = document.getElementById('score-crop-canvas');
+      const maxW = Math.min(900, image.naturalWidth);
+      const maxH = 700;
+      const scale = Math.min(maxW / image.naturalWidth, maxH / image.naturalHeight, 1);
+      canvas.width = Math.max(1, Math.round(image.naturalWidth * scale));
+      canvas.height = Math.max(1, Math.round(image.naturalHeight * scale));
+      scoreCropState = { memberId, image, scale, corners: detectScoreSheetBounds(image, canvas.width, canvas.height), drag: -1 };
+      canvas.onpointerdown = handleCropPointerDown;
+      canvas.onpointermove = handleCropPointerMove;
+      canvas.onpointerup = canvas.onpointercancel = () => { if (scoreCropState) scoreCropState.drag = -1; };
+      drawScoreCrop();
+      showModal('modal-score-crop');
+    }
+
+    function detectScoreSheetBounds(image, width, height) {
+      const probe = document.createElement('canvas');
+      probe.width = width; probe.height = height;
+      const ctx = probe.getContext('2d', { willReadFrequently: true });
+      ctx.drawImage(image, 0, 0, width, height);
+      const pixels = ctx.getImageData(0, 0, width, height).data;
+      let minX = width, minY = height, maxX = 0, maxY = 0, count = 0;
+      for (let y = 0; y < height; y += 3) for (let x = 0; x < width; x += 3) {
+        const i = (y * width + x) * 4;
+        const light = (pixels[i] + pixels[i + 1] + pixels[i + 2]) / 3;
+        if (light > 135 && Math.max(pixels[i], pixels[i + 1], pixels[i + 2]) - Math.min(pixels[i], pixels[i + 1], pixels[i + 2]) < 75) {
+          minX = Math.min(minX, x); minY = Math.min(minY, y); maxX = Math.max(maxX, x); maxY = Math.max(maxY, y); count++;
+        }
+      }
+      const enough = count > (width * height) / 100;
+      const pad = 8;
+      const box = enough ? { left: Math.max(pad, minX), top: Math.max(pad, minY), right: Math.min(width - pad, maxX), bottom: Math.min(height - pad, maxY) }
+        : { left: pad, top: pad, right: width - pad, bottom: height - pad };
+      return [{ x:box.left,y:box.top }, { x:box.right,y:box.top }, { x:box.right,y:box.bottom }, { x:box.left,y:box.bottom }];
+    }
+
+    function drawScoreCrop() {
+      if (!scoreCropState) return;
+      const canvas = document.getElementById('score-crop-canvas');
+      const ctx = canvas.getContext('2d');
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.drawImage(scoreCropState.image, 0, 0, canvas.width, canvas.height);
+      ctx.fillStyle = 'rgba(0,0,0,.42)'; ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.save(); ctx.beginPath(); scoreCropState.corners.forEach((p, i) => i ? ctx.lineTo(p.x,p.y) : ctx.moveTo(p.x,p.y)); ctx.closePath(); ctx.clip();
+      ctx.drawImage(scoreCropState.image, 0, 0, canvas.width, canvas.height); ctx.restore();
+      ctx.strokeStyle = '#38bdf8'; ctx.lineWidth = 3; ctx.beginPath(); scoreCropState.corners.forEach((p, i) => i ? ctx.lineTo(p.x,p.y) : ctx.moveTo(p.x,p.y)); ctx.closePath(); ctx.stroke();
+      scoreCropState.corners.forEach(p => { ctx.fillStyle='#38bdf8'; ctx.beginPath(); ctx.arc(p.x,p.y,10,0,Math.PI*2); ctx.fill(); ctx.strokeStyle='#fff'; ctx.lineWidth=2; ctx.stroke(); });
+    }
+
+    function cropPointerPosition(event) {
+      const canvas = document.getElementById('score-crop-canvas');
+      const rect = canvas.getBoundingClientRect();
+      return { x:(event.clientX-rect.left)*canvas.width/rect.width, y:(event.clientY-rect.top)*canvas.height/rect.height };
+    }
+    function handleCropPointerDown(event) { const p=cropPointerPosition(event); let best=Infinity; scoreCropState.corners.forEach((c,i)=>{const d=(c.x-p.x)**2+(c.y-p.y)**2;if(d<best){best=d;scoreCropState.drag=i;}}); event.currentTarget.setPointerCapture(event.pointerId); }
+    function handleCropPointerMove(event) { if (!scoreCropState || scoreCropState.drag < 0) return; const canvas=event.currentTarget,p=cropPointerPosition(event); scoreCropState.corners[scoreCropState.drag]={x:Math.max(0,Math.min(canvas.width,p.x)),y:Math.max(0,Math.min(canvas.height,p.y))}; drawScoreCrop(); }
+    function resetScoreCrop() { if (!scoreCropState) return; const c=document.getElementById('score-crop-canvas'); scoreCropState.corners=detectScoreSheetBounds(scoreCropState.image,c.width,c.height); drawScoreCrop(); }
+    function useFullScoreImage() { if (!scoreCropState) return; const c=document.getElementById('score-crop-canvas'),p=4; scoreCropState.corners=[{x:p,y:p},{x:c.width-p,y:p},{x:c.width-p,y:c.height-p},{x:p,y:c.height-p}]; drawScoreCrop(); }
+    function cancelScoreCrop() { scoreCropState=null; closeModal('modal-score-crop'); }
+
+    async function confirmScoreCrop() {
+      if (!scoreCropState) return;
+      const polygonArea = Math.abs(scoreCropState.corners.reduce((sum, point, i, points) => {
+        const next = points[(i + 1) % points.length]; return sum + point.x * next.y - next.x * point.y;
+      }, 0) / 2);
+      const cropCanvas = document.getElementById('score-crop-canvas');
+      if (polygonArea < cropCanvas.width * cropCanvas.height * .04) return showToast('選択範囲が小さすぎます。結果票全体を囲んでください。');
+      setScanStatus(scoreCropState.memberId, '傾きとコントラストを補正しています（15%）...');
+      const memberId = scoreCropState.memberId;
+      const output = warpAndEnhanceScoreImage(scoreCropState);
+      const blob = await new Promise(resolve => output.toBlob(resolve, 'image/jpeg', .9));
+      if (!blob) return showToast('画像を処理できませんでした。別の写真をお試しください。');
+      const dataUrl = output.toDataURL('image/jpeg', .9);
+      const originalDataUrl = makeScanReferenceImage(scoreCropState.image);
+      pendingScanImages[memberId] = blob;
+      const thumb = document.getElementById(`scan-thumb-${memberId}`); thumb.src=dataUrl; thumb.style.display='inline-block';
+      scoreCropState=null; closeModal('modal-score-crop');
+      scanPersonalSlip(memberId, dataUrl.split(',')[1], 'image/jpeg', originalDataUrl.split(',')[1]);
+    }
+
+    function makeScanReferenceImage(image) {
+      const canvas=document.createElement('canvas'),scale=Math.min(1,1400/image.naturalWidth);
+      canvas.width=Math.max(1,Math.round(image.naturalWidth*scale)); canvas.height=Math.max(1,Math.round(image.naturalHeight*scale));
+      canvas.getContext('2d').drawImage(image,0,0,canvas.width,canvas.height); return canvas.toDataURL('image/jpeg',.78);
+    }
+
+    function warpAndEnhanceScoreImage(state) {
+      const src=document.createElement('canvas'), scale=state.scale;
+      src.width=state.image.naturalWidth; src.height=state.image.naturalHeight; src.getContext('2d').drawImage(state.image,0,0);
+      const p=state.corners.map(c=>({x:c.x/scale,y:c.y/scale}));
+      const width=Math.min(1800,Math.max(600,Math.round(Math.max(Math.hypot(p[1].x-p[0].x,p[1].y-p[0].y),Math.hypot(p[2].x-p[3].x,p[2].y-p[3].y)))));
+      const ratio=width/Math.max(1,Math.max(Math.hypot(p[3].x-p[0].x,p[3].y-p[0].y),Math.hypot(p[2].x-p[1].x,p[2].y-p[1].y)));
+      const height=Math.max(400,Math.min(2200,Math.round(width/ratio)));
+      const out=document.createElement('canvas'); out.width=width; out.height=height;
+      const sctx=src.getContext('2d',{willReadFrequently:true}), source=sctx.getImageData(0,0,src.width,src.height), result=new ImageData(width,height);
+      for(let y=0;y<height;y++){const v=y/(height-1);for(let x=0;x<width;x++){const u=x/(width-1);const sx=(1-u)*(1-v)*p[0].x+u*(1-v)*p[1].x+u*v*p[2].x+(1-u)*v*p[3].x;const sy=(1-u)*(1-v)*p[0].y+u*(1-v)*p[1].y+u*v*p[2].y+(1-u)*v*p[3].y;const si=(Math.max(0,Math.min(src.height-1,Math.round(sy)))*src.width+Math.max(0,Math.min(src.width-1,Math.round(sx))))*4,di=(y*width+x)*4;for(let k=0;k<3;k++){const value=source.data[si+k];result.data[di+k]=Math.max(0,Math.min(255,(value-128)*1.22+140));}result.data[di+3]=255;}}
+      out.getContext('2d').putImageData(result,0,0); return out;
+    }
+
+    async function scanPersonalSlip(memberId, base64, mime, originalBase64) {
+      setScanStatus(memberId, '画像を送信しています（45%）...');
+      const progressTimer = setTimeout(() => setScanStatus(memberId, '文字とスコアを解析しています（75%）...'), 1200);
 
       try {
         const { data, error } = await supabaseClient.functions.invoke('scan-bowling-slip', {
-          body: { imageBase64: base64, mimeType: mime }
+          body: { imageBase64: base64, originalImageBase64: originalBase64 || null, mimeType: mime }
         });
         if (error) {
           let message = '画像読み取りサービスを利用できませんでした。';
@@ -248,12 +314,15 @@
           throw new Error(message);
         }
 
+        clearTimeout(progressTimer);
+        setScanStatus(memberId, '読み取り結果を確認しています（90%）...');
         const games = Array.isArray(data && data.games) ? data.games : [];
         if (games.length === 0) throw new Error((data && data.error) || 'ゲームを読み取れませんでした。手入力してください。');
 
         applyScannedGames(memberId, games, data.date);
         setScanStatus(memberId, `${games.length}ゲーム分を読み取りました。読み取り精度は完璧ではないため📋アイコンから必ず確認してください。`, 'ok');
       } catch (err) {
+        clearTimeout(progressTimer);
         setScanStatus(memberId, err.message || String(err), 'err');
       }
     }
@@ -276,17 +345,12 @@
     }
 
     function applyScannedGames(memberId, games, date) {
-      const capped = games.slice(0, 5);
-      if (games.length > 5) {
-        showToast(`${games.length}ゲーム検出されましたが、入力欄は最大5Gまでのため先頭5Gのみ反映しました`);
-      }
-
       const gcSelect = document.getElementById(`gc-${memberId}`);
-      gcSelect.value = String(capped.length || 1);
+      gcSelect.value = String(games.length || 1);
 
       if (!scannedFrameData[memberId]) scannedFrameData[memberId] = {};
 
-      capped.forEach((g, idx) => {
+      games.forEach((g, idx) => {
         const gameNumber = idx + 1;
         const frames = normalizeFrames(g.frames);
         const total = computeTotalFromFrames(frames);
@@ -411,18 +475,17 @@
       checkboxes.forEach(cb => {
         const mId = cb.value;
         const gc = parseInt(document.getElementById(`gc-${mId}`).value) || 0;
-        const totals = [1, 2, 3, 4, 5].map(gameNumber => {
-          if (gameNumber > gc) return null;
+        const totals = Array.from({ length: gc }, (_, idx) => {
+          const gameNumber = idx + 1;
           const fd = scannedFrameData[mId] && scannedFrameData[mId][gameNumber];
           return (fd && fd.total != null) ? fd.total : null;
         });
-        const [g1, g2, g3, g4, g5] = totals;
         records.push({
           date: date,
           memberId: mId,
           gameCount: gc,
-          g1: g1, g2: g2, g3: g3, g4: g4, g5: g5,
-          totalScore: (g1||0) + (g2||0) + (g3||0) + (g4||0) + (g5||0),
+          games: totals.map((score, idx) => ({ gameNumber: idx + 1, score })),
+          totalScore: totals.reduce((sum, score) => sum + (score || 0), 0),
           frames: scannedFrameData[mId] || {}
         });
       });

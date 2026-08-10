@@ -92,3 +92,14 @@ supabase/           Edge Functionのソース
 
 通知送信に失敗しても、申請・承認処理自体は完了する。iPhoneではホーム画面へ追加した
 PWAを開いて通知を許可する必要がある。
+
+## 8. スコア申請画像
+
+1. `202608100001_limit_daily_score_scans.sql`、`202608100002_score_request_images.sql`、`202608100003_cleanup_score_request_images_cron.sql` の順にマイグレーションを適用する。
+2. 画像読み取り関数と期限切れ画像削除関数をデプロイする。
+   ```powershell
+   supabase functions deploy scan-bowling-slip
+   supabase functions deploy cleanup-score-request-images
+   ```
+3. `score-request-images` は非公開バケットとして作成される。申請者本人と在籍管理者だけが閲覧できる。
+4. 承認または却下から31日を過ぎた画像は、毎日実行される削除関数がStorageから削除し、申請の `image_path` も空にする。

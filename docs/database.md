@@ -51,7 +51,7 @@ erDiagram
 | `id` | セッションID | `games.session_id` から参照される |
 | `member_id` | 投球したメンバー | `members.id` を参照 |
 | `date` | 実施日 | 日付文字列として利用 |
-| `game_count` | 投球ゲーム数 | 1〜5ゲームを想定 |
+| `game_count` | 投球ゲーム数 | 1ゲーム以上（上限なし） |
 | `created_at` | 作成日時 | 同日の並び順にも使用 |
 | `updated_at` | 更新日時 | 編集時に更新 |
 
@@ -63,7 +63,7 @@ erDiagram
 |---|---|---|
 | `id` | ゲームID | `frames.game_id` から参照される |
 | `session_id` | 所属するセッション | `sessions.id` を参照 |
-| `game_number` | 何ゲーム目か | 1〜5 |
+| `game_number` | 何ゲーム目か | 1以上 |
 | `score` | ゲーム合計点 | ボウリングでは通常0〜300 |
 
 `sessions` を削除すると、関連する `games` も `ON DELETE CASCADE` で削除される前提です。
@@ -122,6 +122,7 @@ erDiagram
 | `packs` | 回数券の冊数 | 購入・返還時。正の整数 |
 | `payment_method` | 支払方法 | `cash` / `ticket` / `null` |
 | `note` | 備考 |  |
+| `image_path` | 申請時の結果票画像 | 非公開Storage上のパス。承認・却下から約1か月後に削除 |
 | `reject_reason` | 却下理由 | 却下時のみ |
 | `decided_at` | 承認・却下日時 |  |
 | `decided_by` | 判断した管理者 | `members.id` を参照すると考えられる |

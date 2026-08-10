@@ -57,7 +57,7 @@
     <button onclick="navigateTo('tab-direct-messages')">✉️ 個別メッセージ <span id="direct-message-unread-badge" class="menu-count" style="display:none;"></span></button>
     <button onclick="openScoreRequestModal(); closeAppMenu();">🎳 スコア入力</button>
     <button onclick="navigateTo('tab-ranking')">🏆 ランキング</button>
-    <button onclick="navigateTo('tab-vault')">🎟️ 回数券残量・購入</button>
+    <button class="ticket-feature" onclick="navigateTo('tab-vault')">🎟️ 回数券残量・購入</button>
     <button onclick="navigateTo('tab-members')">👥 メンバー</button>
     <div class="app-menu-admin admin-only">
       <button onclick="openApprovalCenter(); closeAppMenu();">📋 承認センター <span id="approval-center-badge" class="menu-count" style="display:none;"></span></button>
@@ -81,9 +81,8 @@
           <span><b>管理メニュー</b><small id="dashboard-admin-summary">承認待ちを確認中...</small></span><span id="dashboard-admin-chevron">⌄</span>
         </button>
         <div id="dashboard-admin-body" class="dashboard-admin-body">
-          <button onclick="openApprovalCenter()"><span>📋 スコア・購入承認</span><b id="dashboard-pending-count">0件</b></button>
-          <button onclick="navigateTo('tab-vault')"><span>🎟️ 回数券残量管理</span><span>›</span></button>
-          <button onclick="navigateTo('tab-members')"><span>👥 メンバー残量一覧</span><span>›</span></button>
+          <button onclick="openApprovalCenter()"><span>📋 スコア承認</span><b id="dashboard-pending-count">0件</b></button>
+          <button class="ticket-feature" onclick="navigateTo('tab-vault')"><span>🎟️ 回数券残量管理</span><span>›</span></button>
         </div>
       </section>
       <section class="dashboard-hero">
@@ -125,7 +124,7 @@
       </section>
       <div class="dashboard-link-grid">
         <button class="dashboard-link-card dashboard-ranking-card" onclick="navigateTo('tab-ranking')"><span class="link-icon gold">🏆</span><span><small>今月のメダル</small><b id="dashboard-ranking">—</b><em>ランキングを見る</em></span><span>›</span></button>
-        <button class="dashboard-link-card dashboard-ticket-card" onclick="openTicketRequestModal()"><span class="link-icon blue">🎟️</span><span><small>回数券残量</small><b id="dashboard-ticket-balance">— G</b><em>購入申請</em></span><span>›</span></button>
+        <button class="dashboard-link-card dashboard-ticket-card ticket-feature" onclick="openTicketRequestModal()"><span class="link-icon blue">🎟️</span><span><small>回数券残量</small><b id="dashboard-ticket-balance">— G</b><em>購入申請</em></span><span>›</span></button>
       </div>
       <div class="dashboard-secondary-grid">
         <button class="dashboard-card dashboard-achievements dashboard-popup-card" onclick="openDashboardAchievements()">
@@ -169,7 +168,7 @@
     </div>
 
     <!-- 2. 回数券残量タブ（収支ダッシュボード付き） -->
-    <div id="tab-vault" class="tab-content" style="display: none;">
+    <div id="tab-vault" class="tab-content ticket-feature" style="display: none;">
       <div class="feature-page-header">
         <span class="feature-page-icon blue">🎟️</span>
         <span><small>TICKET WALLET</small><h2>回数券</h2><p>残量の確認と購入申請</p></span>
@@ -448,7 +447,7 @@
       <h3 style="margin-top:0;">⚙️ 管理者設定</h3>
       <p style="font-size:11px; color:#888; margin-top:-6px;">パスワードの変更はSupabaseのアカウント設定から行ってください。</p>
 
-      <div style="background:#252525; padding:10px; border-radius:8px;">
+      <div class="ticket-feature" style="background:#252525; padding:10px; border-radius:8px;">
         <p style="font-size:13px; font-weight:bold; margin:0 0 8px 0;">🎟️ 回数券 単価・冊数設定</p>
         <p style="font-size:12px;">1冊あたりの金額(円): <input type="number" id="settings-price-per-pack" style="width:100%;"></p>
         <p style="font-size:12px;">1冊あたりのゲーム数: <input type="number" id="settings-games-per-pack" style="width:100%;"></p>
@@ -473,21 +472,10 @@
 
       <p style="font-size: 13px;">日付: <input type="date" id="edit-score-date"></p>
       <p style="font-size: 13px;">投球G数: 
-        <select id="edit-score-gc" onchange="updateEditGameSlots()" style="padding:2px 4px;">
-          <option value="1">1 G</option>
-          <option value="2">2 G</option>
-          <option value="3">3 G</option>
-          <option value="4">4 G</option>
-          <option value="5">5 G</option>
-        </select>
+        <input type="number" id="edit-score-gc" min="1" step="1" inputmode="numeric" value="3" onchange="updateEditGameSlots()" style="width:64px; padding:2px 4px;"> G
       </p>
 
       <div class="input-grid" id="edit-score-grid" style="margin-top: 10px;">
-        <div class="input-box-wrap"><label>1G</label><input type="number" id="edit-score-g1" class="input-box" placeholder="0"></div>
-        <div class="input-box-wrap"><label>2G</label><input type="number" id="edit-score-g2" class="input-box" placeholder="0"></div>
-        <div class="input-box-wrap"><label>3G</label><input type="number" id="edit-score-g3" class="input-box" placeholder="0"></div>
-        <div class="input-box-wrap hidden-slot" id="edit-score-g4-wrap"><label>4G</label><input type="number" id="edit-score-g4" class="input-box" placeholder="0"></div>
-        <div class="input-box-wrap hidden-slot" id="edit-score-g5-wrap"><label>5G</label><input type="number" id="edit-score-g5" class="input-box" placeholder="0"></div>
       </div>
 
       <div style="display:flex; justify-content:space-between; align-items:center; margin-top: 15px;">
@@ -545,6 +533,22 @@
           <button class="btn btn-secondary" onclick="closeModal('modal-frame-edit')">キャンセル</button>
           <button class="btn btn-success" onclick="saveFrameEdit()">この内容で反映</button>
         </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="modal-score-crop" class="modal" style="z-index:1800;">
+    <div class="modal-content crop-modal-content">
+      <h3 style="margin-top:0;">📐 結果票の範囲を調整</h3>
+      <p class="crop-help">青い四隅を動かして、スコア表だけを囲んでください。傾きも自動補正します。</p>
+      <div class="crop-canvas-wrap"><canvas id="score-crop-canvas"></canvas></div>
+      <div class="crop-actions">
+        <button class="btn btn-secondary btn-sm" onclick="resetScoreCrop()">自動範囲に戻す</button>
+        <button class="btn btn-secondary btn-sm" onclick="useFullScoreImage()">画像全体を使う</button>
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-secondary" onclick="cancelScoreCrop()">キャンセル</button>
+        <button class="btn btn-success" onclick="confirmScoreCrop()">この範囲で読み取る</button>
       </div>
     </div>
   </div>
@@ -628,7 +632,7 @@
         <div class="summary-stat-label">本日の総ゲーム数</div>
         <div class="summary-stat-value" id="summary-total-games" style="color:#38bdf8;">0 G</div>
       </div>
-      <div class="summary-arrow-row">
+      <div class="summary-arrow-row ticket-feature">
         <div class="box">
           <div class="lbl">引く前ストック</div>
           <div class="val" id="summary-pool-before" style="color:#cbd5e1;">0 G</div>
@@ -660,7 +664,7 @@
   </div>
 
   <!-- 回数券申請モーダル -->
-  <div id="modal-ticket-request" class="modal">
+  <div id="modal-ticket-request" class="modal ticket-feature">
     <div class="modal-content" style="max-width:420px;">
       <h3 style="margin-top:0;">🎟️ 回数券の申請</h3>
       <p style="font-size:12px; color:#aaa;">購入または退会時の返還を申請します。管理者が現金・回数券を確認した後に残高へ反映されます。</p>
@@ -696,7 +700,7 @@
       <h3 style="margin-top:0;">📋 承認センター</h3>
       <div style="display:flex; gap:6px; margin-bottom:10px;">
         <button class="btn btn-secondary btn-sm" id="approval-tab-score" onclick="switchApprovalType('score')">🎳 スコア申請</button>
-        <button class="btn btn-secondary btn-sm" id="approval-tab-purchase" onclick="switchApprovalType('purchase')">🎟️ 回数券申請</button>
+        <button class="btn btn-secondary btn-sm ticket-feature" id="approval-tab-purchase" onclick="switchApprovalType('purchase')">🎟️ 回数券申請</button>
       </div>
       <div id="approval-list-container" style="max-height:60vh; overflow-y:auto;"></div>
       <div style="text-align: right; margin-top: 15px;">
@@ -781,8 +785,8 @@
   <script src="js/auth.js"></script>
   <script src="js/stats.js"></script>
   <script src="js/data.js"></script>
-  <script src="js/scores.js"></script>
-  <script src="js/requests.js?v=708b149"></script>
+  <script src="js/scores.js?v=20260810b"></script>
+  <script src="js/requests.js?v=20260810b"></script>
   <script src="js/announcements.js"></script>
   <script src="js/schedule.js"></script>
   <script src="js/chat.js"></script>

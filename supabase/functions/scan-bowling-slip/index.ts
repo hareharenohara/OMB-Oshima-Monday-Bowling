@@ -13,9 +13,12 @@ const jsonHeaders = {
 
 const allowedMimeTypes = new Set(["image/jpeg", "image/png", "image/webp"]);
 const maxBase64Length = 10_000_000;
+const dailyScanLimit = 5;
 
-const prompt = `添付の画像は、ボウリング場で1人のプレイヤーに渡される個人結果票です。
-この人が投げた各ゲームの結果を、投球順に配列で読み取ってください。
+const prompt = `添付画像は同じボウリング個人結果票です。1枚目は台形・コントラスト補正済み、2枚目がある場合は元画像です。必ず両方を照合してください。
+まず表の行・列、ゲーム番号、10フレームの境界を特定し、その後に各投球記号と累積スコアを読み取ってください。最終回答だけをJSONで出力してください。
+スプリット判定は特に慎重に行ってください。各フレームの1投目の数字の外側に、印刷された独立した円または楕円が確認できる場合だけis_split=trueとします。0・6・8・9など数字自身の輪郭、罫線、汚れ、影は丸印ではありません。補正画像で円が薄い場合は元画像も確認してください。独立した囲みが確認できなければfalseにしてください。
+ゲーム番号・最終累積スコア・各フレームの位置関係を照合し、推測できない文字は勝手に補わずnullまたは空文字にしてください。
 各ゲームは次の形式のオブジェクトにしてください:
 {"frames": 必ず10要素の配列。各要素は {"throws": [...], "score": 数値またはnull, "is_split": true/false} というオブジェクト。
 throwsは各投球の結果を表す文字列の配列。ストライクは"X"、スペアは"/"、ピンを1本も倒せなかったミスは"-"、ガター(両端の溝に落ちた)は"G"、ファール(投球時にファールラインを越えた)は"F"、それ以外は倒したピン数を表す数字の文字列。
@@ -56,12 +59,12 @@ Deno.serve(async (req) => {
     global: { headers: { Authorization: authorization } },
     auth: { persistSession: false },
   });
-  const { error: authError } = await supabase.auth.getUser();
-  if (authError) {
+  const { data: authData, error: authError } = await supabase.auth.getUser();
+  if (authError || !authData.user) {
     return jsonResponse({ error: "ログイン情報を確認できませんでした。" }, 401);
   }
 
-  let body: { imageBase64?: unknown; mimeType?: unknown };
+  let body: { imageBase64?: unknown; originalImageBase64?: unknown; mimeType?: unknown };
   try {
     body = await req.json();
   } catch {
@@ -69,9 +72,19 @@ Deno.serve(async (req) => {
   }
 
   const imageBase64 = typeof body.imageBase64 === "string" ? body.imageBase64 : "";
+  const originalImageBase64 = typeof body.originalImageBase64 === "string" ? body.originalImageBase64 : "";
   const mimeType = typeof body.mimeType === "string" ? body.mimeType : "";
-  if (!imageBase64 || imageBase64.length > maxBase64Length || !allowedMimeTypes.has(mimeType)) {
+  if (!imageBase64 || imageBase64.length > maxBase64Length || originalImageBase64.length > maxBase64Length || !allowedMimeTypes.has(mimeType)) {
     return jsonResponse({ error: "画像の形式またはサイズが正しくありません。" }, 400);
+  }
+
+  const { error: usageError } = await supabase.from("score_scan_usage").insert({ user_id: authData.user.id });
+  if (usageError) {
+    if (usageError.message.includes("daily_scan_limit_exceeded")) {
+      return jsonResponse({ error: `画像読み取りは1日${dailyScanLimit}回までです。明日もう一度お試しください。` }, 429);
+    }
+    console.error("scan usage insert failed", usageError.message);
+    return jsonResponse({ error: "画像読み取り回数を確認できませんでした。" }, 503);
   }
 
   try {
@@ -88,12 +101,16 @@ Deno.serve(async (req) => {
             parts: [
               { text: prompt },
               { inline_data: { mime_type: mimeType, data: imageBase64 } },
+              ...(originalImageBase64 ? [{ inline_data: { mime_type: mimeType, data: originalImageBase64 } }] : []),
             ],
           }],
           generationConfig: {
             responseMimeType: "application/json",
             temperature: 0,
             maxOutputTokens: 8192,
+            thinkingConfig: model.startsWith("gemini-3")
+              ? { thinkingLevel: "LOW" }
+              : { thinkingBudget: 0 },
           },
         }),
       },
