@@ -18,12 +18,19 @@ Deno.serve(async (req) => {
   const admin = createClient(url, serviceKey, { auth: { persistSession: false } });
   const now = new Date();
   const within24Hours = new Date(now.getTime() + 24 * 60 * 60 * 1000);
+  const tokyoDateKey = (date: Date) => {
+    const parts = new Intl.DateTimeFormat("en-CA", {
+      timeZone: "Asia/Tokyo", year: "numeric", month: "2-digit", day: "2-digit",
+    }).formatToParts(date);
+    const get = (type: string) => parts.find((part) => part.type === type)?.value || "";
+    return `${get("year")}-${get("month")}-${get("day")}`;
+  };
+  const todayInTokyo = tokyoDateKey(now);
   const { data: events, error: eventError } = await admin.from("schedule_events")
     .select("id,title,starts_at,response_deadline,status")
     .eq("status", "scheduled")
-    .not("response_deadline", "is", null)
     .gt("starts_at", now.toISOString())
-    .lte("response_deadline", within24Hours.toISOString());
+    .lte("starts_at", within24Hours.toISOString());
   if (eventError) return new Response(JSON.stringify({ error: eventError.message }), { status: 500, headers });
   if (!events?.length) return new Response(JSON.stringify({ sent: 0, candidates: 0 }), { headers });
 
@@ -53,7 +60,7 @@ Deno.serve(async (req) => {
   let sent = 0;
   let candidates = 0;
   for (const event of events) {
-    const reminderType = new Date(event.response_deadline).getTime() < now.getTime() ? "overdue" : "due_soon";
+    const reminderType = tokyoDateKey(new Date(event.starts_at)) === todayInTokyo ? "event_day" : "due_soon";
     for (const memberId of memberIds) {
       const preference = preferences.get(memberId);
       if (preference && (!preference.push_enabled || !preference.schedule_reminders)) continue;
@@ -69,9 +76,9 @@ Deno.serve(async (req) => {
       });
       if (reserveError) continue;
 
-      const message = reminderType === "due_soon"
-        ? { title: "出欠の回答期限が迫っています", body: `${event.title}の回答期限は24時間以内です。` }
-        : { title: "出欠の回答期限を過ぎています", body: `${event.title}が未回答のまま期限を過ぎています。予定をご確認ください。` };
+      const message = reminderType === "event_day"
+        ? { title: "本日の予定に回答してください", body: `${event.title}は本日開催です。参加・不参加・未定のいずれかを回答してください。` }
+        : { title: "出欠の回答期限が迫っています", body: `${event.title}は24時間以内に開催されます。` };
       let deliveredToDevice = false;
       for (const subscription of memberSubscriptions) {
         try {
