@@ -13,7 +13,6 @@
             <div>
               <strong style="font-size:14px;">${escapeHtml(m.name)}</strong><br>
               <span style="font-size:12px;color:#94a3b8;">通算Avg ${stats.totalAvg.toFixed(1)}</span>
-              <span class="badge ${badgeClass} admin-only">残り ${stats.remainingGames} G</span>
             </div>
             <div style="display:flex; gap:4px;">
               <button class="btn btn-primary btn-sm" onclick="openMemberDashboard('${m.id}')">詳細</button>
@@ -78,12 +77,12 @@
             <div>
               <div style="font-weight:bold; color:#38bdf8;">${att.date} - ${escapeHtml(att.memberName)}</div>
               <div style="color:#aaa; margin-top:2px;">
-                投球: ${att.gameCount}G | スコア: [${[att.g1, att.g2, att.g3, att.g4, att.g5].slice(0, att.gameCount).map(g => g !== null && g !== undefined ? g : '-').join(', ')}] | 合計: ${att.totalScore}
+                投球: ${att.gameCount}G | スコア: [${(att.games || []).map(g => g.score != null ? g.score : '-').join(', ')}] | 合計: ${att.totalScore}
               </div>
             </div>
             <div style="display:flex; gap:4px;">
               <button class="btn btn-secondary btn-sm" onclick="showGameDetail('${att.id}')">詳細</button>
-              <button class="btn btn-secondary btn-sm admin-only" onclick="showEditScoreModal('${att.id}', '${att.memberId}', '${att.date}', ${att.gameCount}, ${att.g1}, ${att.g2}, ${att.g3}, ${att.g4}, ${att.g5})">編集</button>
+              <button class="btn btn-secondary btn-sm admin-only" onclick="showEditScoreModal('${att.id}')">編集</button>
             </div>
           </div>
         `;

@@ -190,64 +190,53 @@
       setTimeout(() => toast.remove(), 3500);
     }
 
-    function showEditScoreModal(id, memberId, date, gameCount, g1, g2, g3, g4, g5) {
+    function showEditScoreModal(id) {
+      const attendance = appData.attendance.find(a => a.id === id);
+      if (!attendance) return showToast('編集する記録を取得できませんでした');
       closeModal('modal-history-view');
       document.getElementById('edit-score-id').value = id;
 
       const memberSelect = document.getElementById('edit-score-member-id');
       memberSelect.innerHTML = appData.members.map(m =>
-        `<option value="${m.id}" ${m.id === memberId ? 'selected' : ''}>${escapeHtml(m.name)}</option>`
+        `<option value="${m.id}" ${m.id === attendance.memberId ? 'selected' : ''}>${escapeHtml(m.name)}</option>`
       ).join('');
 
-      document.getElementById('edit-score-date').value = date;
-      document.getElementById('edit-score-gc').value = gameCount;
-
-      document.getElementById('edit-score-g1').value = (g1 !== null && g1 !== undefined && !isNaN(g1)) ? g1 : '';
-      document.getElementById('edit-score-g2').value = (g2 !== null && g2 !== undefined && !isNaN(g2)) ? g2 : '';
-      document.getElementById('edit-score-g3').value = (g3 !== null && g3 !== undefined && !isNaN(g3)) ? g3 : '';
-      document.getElementById('edit-score-g4').value = (g4 !== null && g4 !== undefined && !isNaN(g4)) ? g4 : '';
-      document.getElementById('edit-score-g5').value = (g5 !== null && g5 !== undefined && !isNaN(g5)) ? g5 : '';
+      document.getElementById('edit-score-date').value = attendance.date;
+      document.getElementById('edit-score-gc').value = attendance.gameCount;
+      document.getElementById('edit-score-grid').dataset.scores = JSON.stringify((attendance.games || []).map(g => g.score));
 
       updateEditGameSlots();
       showModal('modal-edit-score');
     }
 
-    // 編集モーダルの投球G数選択に応じて4G/5G目の入力欄の表示・非表示を切り替える
+    // 編集モーダルもゲーム数の上限を設けず、必要な入力欄を生成する
     function updateEditGameSlots() {
-      const gc = parseInt(document.getElementById('edit-score-gc').value) || 3;
+      const gcInput = document.getElementById('edit-score-gc');
+      const gc = Math.max(1, parseInt(gcInput.value) || 3);
+      gcInput.value = gc;
       const grid = document.getElementById('edit-score-grid');
-      grid.classList.remove('games-4', 'games-5');
-      if (gc === 4) grid.classList.add('games-4');
-      if (gc === 5) grid.classList.add('games-5');
-
-      document.getElementById('edit-score-g4-wrap').classList.toggle('hidden-slot', gc < 4);
-      document.getElementById('edit-score-g5-wrap').classList.toggle('hidden-slot', gc < 5);
+      const previous = Array.from(grid.querySelectorAll('input')).map(input => input.value);
+      const saved = JSON.parse(grid.dataset.scores || '[]');
+      grid.innerHTML = Array.from({ length: gc }, (_, idx) => {
+        const value = previous[idx] ?? saved[idx] ?? '';
+        return `<div class="input-box-wrap"><label>${idx + 1}G</label><input type="number" class="input-box edit-score-game" min="0" max="300" value="${value}" placeholder="0"></div>`;
+      }).join('');
+      grid.dataset.scores = '[]';
     }
 
     function submitUpdateScore() {
-      const g1Val = document.getElementById('edit-score-g1').value;
-      const g2Val = document.getElementById('edit-score-g2').value;
-      const g3Val = document.getElementById('edit-score-g3').value;
-      const g4Val = document.getElementById('edit-score-g4').value;
-      const g5Val = document.getElementById('edit-score-g5').value;
-
-      const g1 = g1Val !== '' ? parseInt(g1Val) : null;
-      const g2 = g2Val !== '' ? parseInt(g2Val) : null;
-      const g3 = g3Val !== '' ? parseInt(g3Val) : null;
-      const g4 = g4Val !== '' ? parseInt(g4Val) : null;
-      const g5 = g5Val !== '' ? parseInt(g5Val) : null;
+      const games = Array.from(document.querySelectorAll('#edit-score-grid .edit-score-game')).map((input, idx) => ({
+        gameNumber: idx + 1,
+        score: input.value === '' ? null : parseInt(input.value)
+      }));
 
       const record = {
         id: document.getElementById('edit-score-id').value,
         memberId: document.getElementById('edit-score-member-id').value,
         date: document.getElementById('edit-score-date').value,
         gameCount: parseInt(document.getElementById('edit-score-gc').value) || 0,
-        g1: g1,
-        g2: g2,
-        g3: g3,
-        g4: g4,
-        g5: g5,
-        totalScore: (g1 || 0) + (g2 || 0) + (g3 || 0) + (g4 || 0) + (g5 || 0)
+        games,
+        totalScore: games.reduce((sum, game) => sum + (game.score || 0), 0)
       };
 
       document.getElementById('loading').style.display = 'block';

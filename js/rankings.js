@@ -6,8 +6,8 @@
       g3: '3G合計スコアランキング\n\n1回の参加が3ゲームだった日の合計スコアが最も高かった記録のランキングです（4G・5Gで参加した日は対象外）。',
       high: 'ハイスコア(1G)ランキング\n\n1ゲームで記録した最高スコアのランキングです。',
       games: '投球ゲーム数ランキング\n\n選択した期間内に投球した総ゲーム数のランキングです。',
-      gapMax: '最多ギャップランキング\n\n1日(最大5G)の中での「最高スコア」と「最低スコア」の差が最も大きかった日の記録のランキングです。波の大きさを競います。（2ゲームのみの日は対象外）',
-      gapMin: '最小ギャップランキング\n\n1日(最大5G)の中での「最高スコア」と「最低スコア」の差が最も小さかった日の記録のランキングです（例: 150, 152, 151点など）。安定感を競います。（2ゲームのみの日は対象外）',
+      gapMax: '最多ギャップランキング\n\n1日のゲームの中で「最高スコア」と「最低スコア」の差が最も大きかった記録のランキングです。波の大きさを競います。（2ゲームのみの日は対象外）',
+      gapMin: '最小ギャップランキング\n\n1日のゲームの中で「最高スコア」と「最低スコア」の差が最も小さかった記録のランキングです（例: 150, 152, 151点など）。安定感を競います。（2ゲームのみの日は対象外）',
       mip: '急成長(MIP)ランキング\n\n通算アベレージと比較して、選択した期間のアベレージがどれだけ伸びたかのランキングです。通算(歴代)フィルタでは算出できないため表示されません。',
       giant: 'ジャイアントキリングランキング\n\n自分の通算アベレージより+30点以上高いスコアを出した回数のランキングです。',
       strikeRate: 'ストライク率ランキング\n\n選択した期間内で、写真読み取り(フレーム詳細)のある記録が6ゲーム以上ある人を対象に、全フレームに占めるストライクの割合が高い順のランキングです。フレーム詳細のない手入力の記録は対象外です。',
@@ -85,7 +85,8 @@
         const s = statsMap[att.memberId];
         s.totalScore += att.totalScore;
         s.games += att.gameCount;
-        const maxInAtt = Math.max(att.g1 || 0, att.g2 || 0, att.g3 || 0, att.g4 || 0, att.g5 || 0);
+        const attendanceScores = att.scores || (att.games || []).map(g => g.score) || [att.g1, att.g2, att.g3, att.g4, att.g5];
+        const maxInAtt = Math.max(...attendanceScores.map(v => v || 0));
         if (maxInAtt > s.highScore) {
           s.highScore = maxInAtt;
           s.highScoreDate = att.date;
@@ -100,8 +101,8 @@
           s.max3GSessionId = att.id;
         }
 
-        // 最多/最小ギャップ（その日に記録されたゲーム(最大5G)の中での最高・最低差。2Gのみの日は対象外）
-        const dayVals = [att.g1, att.g2, att.g3, att.g4, att.g5].filter(v => v != null);
+        // 最多/最小ギャップ（その日に記録された全ゲームの最高・最低差。2Gのみの日は対象外）
+        const dayVals = attendanceScores.filter(v => v != null);
         if (dayVals.length >= 3) {
           const gap = Math.max(...dayVals) - Math.min(...dayVals);
           const breakdown = dayVals.join(' / ');
@@ -116,7 +117,7 @@
         // ジャイアントキリング（個人の通算アベレージ+30点以上）
         const personalAvg = (appData.stats[att.memberId] && appData.stats[att.memberId].totalAvg) || 0;
         if (personalAvg > 0) {
-          [att.g1, att.g2, att.g3, att.g4, att.g5].forEach(g => {
+          attendanceScores.forEach(g => {
             if (g != null && g >= personalAvg + 30) s.giantCount++;
           });
         }
