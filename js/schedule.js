@@ -149,9 +149,13 @@ function openScheduleEditor(id = '') {
   document.getElementById('schedule-ends-at').value = event?.ends_at ? scheduleDateTimeLocal(event.ends_at) : '';
   document.getElementById('schedule-location').value = event?.location || '';
   document.getElementById('schedule-details').value = event?.details || '';
-  document.getElementById('schedule-deadline').value = event?.response_deadline ? scheduleDateTimeLocal(event.response_deadline) : '';
+  document.getElementById('schedule-deadline').value = scheduleDateTimeLocal(event?.starts_at);
   document.getElementById('schedule-delete-btn').style.display = event ? '' : 'none';
   showModal('modal-schedule-editor');
+}
+
+function syncScheduleDeadlineToStart() {
+  document.getElementById('schedule-deadline').value = document.getElementById('schedule-starts-at').value;
 }
 
 async function saveSchedule() {
@@ -161,16 +165,13 @@ async function saveSchedule() {
   const title = document.getElementById('schedule-title').value.trim();
   const startsLocal = document.getElementById('schedule-starts-at').value;
   const endsLocal = document.getElementById('schedule-ends-at').value;
-  const deadlineLocal = document.getElementById('schedule-deadline').value;
   if (!title || !startsLocal) return showToast('タイトルと開始日時を入力してください。');
   const startsAt = new Date(startsLocal);
   const endsAt = endsLocal ? new Date(endsLocal) : null;
-  const deadline = deadlineLocal ? new Date(deadlineLocal) : null;
   if (endsAt && endsAt <= startsAt) return showToast('終了日時は開始日時より後にしてください。');
   if (!id && startsAt < new Date()) return showToast('過去の日時は新規登録できません。');
   if (startsAt > scheduleHorizon()) return showToast('今日から2か月先までの日付を選んでください。');
-  if (deadline && deadline > startsAt) return showToast('回答期限は開始日時より前にしてください。');
-  const payload = { title, event_type:document.getElementById('schedule-type').value, starts_at:startsAt.toISOString(), ends_at:endsAt?.toISOString() || null, location:document.getElementById('schedule-location').value.trim(), details:document.getElementById('schedule-details').value.trim(), response_deadline:deadline?.toISOString() || null, status:document.getElementById('schedule-status').value, updated_at:new Date().toISOString() };
+  const payload = { title, event_type:document.getElementById('schedule-type').value, starts_at:startsAt.toISOString(), ends_at:endsAt?.toISOString() || null, location:document.getElementById('schedule-location').value.trim(), details:document.getElementById('schedule-details').value.trim(), response_deadline:startsAt.toISOString(), status:document.getElementById('schedule-status').value, updated_at:new Date().toISOString() };
   document.getElementById('schedule-save-btn').disabled = true;
   const query = id ? supabaseClient.from('schedule_events').update(payload).eq('id', id) : supabaseClient.from('schedule_events').insert({ ...payload, created_by:supabaseMemberId });
   const { error } = await query;

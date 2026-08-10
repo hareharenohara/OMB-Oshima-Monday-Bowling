@@ -46,9 +46,6 @@ Deno.serve(async (req) => {
     const key = dateKey(cursor);
     const startsAt = new Date(`${key}T19:00:00+09:00`);
     if (startsAt > new Date()) {
-      const deadlineDate = new Date(cursor);
-      deadlineDate.setUTCDate(deadlineDate.getUTCDate() - 7);
-      const deadline = new Date(`${dateKey(deadlineDate)}T23:59:00+09:00`);
       rows.push({
         recurrence_key: `monday-${key}`,
         title: "月曜会",
@@ -57,7 +54,7 @@ Deno.serve(async (req) => {
         ends_at: null,
         location: "",
         details: "",
-        response_deadline: deadline.toISOString(),
+        response_deadline: startsAt.toISOString(),
         status: "scheduled",
         created_by: caller.id,
       });

@@ -387,7 +387,7 @@
         <label class="notification-switch"><span><b>📢 お知らせ</b><small>管理者からのお知らせ</small></span><input type="checkbox" id="notification-pref-announcements"><i></i></label>
         <label class="notification-switch"><span><b>💬 全体チャット</b><small>新しいグループメッセージ</small></span><input type="checkbox" id="notification-pref-group-chat"><i></i></label>
         <label class="notification-switch"><span><b>✉️ 個別メッセージ</b><small>自分宛てのメッセージ</small></span><input type="checkbox" id="notification-pref-direct"><i></i></label>
-        <label class="notification-switch"><span><b>⏳ 予定リマインド</b><small>回答期限24時間以内・期限超過</small></span><input type="checkbox" id="notification-pref-schedule"><i></i></label>
+        <label class="notification-switch"><span><b>⏳ 予定リマインド</b><small>開催前日・当日の未回答通知</small></span><input type="checkbox" id="notification-pref-schedule"><i></i></label>
       </div>
       <div class="modal-actions"><button class="btn btn-secondary" onclick="closeModal('modal-notification-settings')">キャンセル</button><button id="notification-settings-save" class="btn btn-success" onclick="saveNotificationSettings()">保存</button></div>
     </div>
@@ -432,12 +432,12 @@
         <label class="form-field"><span>状態</span><select id="schedule-status"><option value="scheduled">開催予定</option><option value="cancelled">中止</option></select></label>
       </div>
       <div class="announcement-form-grid">
-        <label class="form-field"><span>開始日時</span><input type="datetime-local" id="schedule-starts-at"></label>
+        <label class="form-field"><span>開始日時</span><input type="datetime-local" id="schedule-starts-at" onchange="syncScheduleDeadlineToStart()"></label>
         <label class="form-field"><span>終了日時（任意）</span><input type="datetime-local" id="schedule-ends-at"></label>
       </div>
       <label class="form-field"><span>場所</span><input id="schedule-location" maxlength="200" placeholder="例: 大島ボウル"></label>
       <label class="form-field"><span>詳細（任意）</span><textarea id="schedule-details" maxlength="3000" rows="4" placeholder="集合時間や持ち物など"></textarea></label>
-      <label class="form-field"><span>回答期限（任意）</span><input type="datetime-local" id="schedule-deadline"></label>
+      <label class="form-field"><span>回答期限（開催開始時刻まで）</span><input type="datetime-local" id="schedule-deadline" disabled></label>
       <div class="modal-actions announcement-editor-actions"><button id="schedule-delete-btn" class="btn btn-danger btn-sm" onclick="deleteSchedule()" style="display:none;">削除</button><span></span><button class="btn btn-secondary" onclick="closeModal('modal-schedule-editor')">キャンセル</button><button id="schedule-save-btn" class="btn btn-success" onclick="saveSchedule()">保存</button></div>
     </div>
   </div>
@@ -788,7 +788,7 @@
   <script src="js/scores.js?v=20260810c"></script>
   <script src="js/requests.js?v=20260810b"></script>
   <script src="js/announcements.js"></script>
-  <script src="js/schedule.js"></script>
+  <script src="js/schedule.js?v=20260810b"></script>
   <script src="js/chat.js"></script>
   <script src="js/direct-messages.js"></script>
   <script src="js/vault.js"></script>
