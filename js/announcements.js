@@ -127,6 +127,12 @@ function renderDashboardAnnouncement() {
   const card = document.getElementById('dashboard-announcement-card');
   const target = document.getElementById('dashboard-announcement-latest');
   if (!card || !target) return;
+  const isOwnDashboard = typeof getDashboardMemberId !== 'function'
+    || getDashboardMemberId() === supabaseMemberId;
+  if (!isOwnDashboard) {
+    card.style.display = 'none';
+    return;
+  }
   if (!announcementsLoaded) {
     loadAnnouncements();
     return;
