@@ -540,8 +540,8 @@
   <div id="modal-score-crop" class="modal" style="z-index:1800;">
     <div class="modal-content crop-modal-content">
       <h3 style="margin-top:0;">📐 結果票の範囲を調整</h3>
-      <p class="crop-help">青い四隅を動かして、スコア表だけを囲んでください。傾きも自動補正します。</p>
-      <div class="crop-canvas-wrap"><canvas id="score-crop-canvas"></canvas></div>
+      <p class="crop-help">青い四隅を動かして、スコア表だけを囲んでください。移動中は指から離れた位置に拡大表示されます。</p>
+      <div class="crop-canvas-wrap"><canvas id="score-crop-canvas"></canvas><canvas id="score-crop-loupe" aria-hidden="true"></canvas></div>
       <div class="crop-actions">
         <button class="btn btn-secondary btn-sm" onclick="resetScoreCrop()">自動範囲に戻す</button>
         <button class="btn btn-secondary btn-sm" onclick="useFullScoreImage()">画像全体を使う</button>
@@ -785,7 +785,7 @@
   <script src="js/auth.js"></script>
   <script src="js/stats.js"></script>
   <script src="js/data.js"></script>
-  <script src="js/scores.js?v=20260810b"></script>
+  <script src="js/scores.js?v=20260810c"></script>
   <script src="js/requests.js?v=20260810b"></script>
   <script src="js/announcements.js"></script>
   <script src="js/schedule.js"></script>

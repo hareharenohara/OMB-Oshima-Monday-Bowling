@@ -200,20 +200,23 @@
 
     function openScoreCropEditor(memberId, image) {
       const canvas = document.getElementById('score-crop-canvas');
-      const maxW = Math.min(900, image.naturalWidth);
-      const maxH = 700;
+      const controlPadding = 30;
+      const maxW = Math.min(840, image.naturalWidth);
+      const maxH = 640;
       const scale = Math.min(maxW / image.naturalWidth, maxH / image.naturalHeight, 1);
-      canvas.width = Math.max(1, Math.round(image.naturalWidth * scale));
-      canvas.height = Math.max(1, Math.round(image.naturalHeight * scale));
-      scoreCropState = { memberId, image, scale, corners: detectScoreSheetBounds(image, canvas.width, canvas.height), drag: -1 };
+      const imageWidth = Math.max(1, Math.round(image.naturalWidth * scale));
+      const imageHeight = Math.max(1, Math.round(image.naturalHeight * scale));
+      canvas.width = imageWidth + controlPadding * 2;
+      canvas.height = imageHeight + controlPadding * 2;
+      scoreCropState = { memberId, image, scale, imageWidth, imageHeight, controlPadding, corners: detectScoreSheetBounds(image, imageWidth, imageHeight, controlPadding), drag: -1 };
       canvas.onpointerdown = handleCropPointerDown;
       canvas.onpointermove = handleCropPointerMove;
-      canvas.onpointerup = canvas.onpointercancel = () => { if (scoreCropState) scoreCropState.drag = -1; };
+      canvas.onpointerup = canvas.onpointercancel = finishCropDrag;
       drawScoreCrop();
       showModal('modal-score-crop');
     }
 
-    function detectScoreSheetBounds(image, width, height) {
+    function detectScoreSheetBounds(image, width, height, offset = 0) {
       const probe = document.createElement('canvas');
       probe.width = width; probe.height = height;
       const ctx = probe.getContext('2d', { willReadFrequently: true });
@@ -231,20 +234,22 @@
       const pad = 8;
       const box = enough ? { left: Math.max(pad, minX), top: Math.max(pad, minY), right: Math.min(width - pad, maxX), bottom: Math.min(height - pad, maxY) }
         : { left: pad, top: pad, right: width - pad, bottom: height - pad };
-      return [{ x:box.left,y:box.top }, { x:box.right,y:box.top }, { x:box.right,y:box.bottom }, { x:box.left,y:box.bottom }];
+      return [{ x:box.left+offset,y:box.top+offset }, { x:box.right+offset,y:box.top+offset }, { x:box.right+offset,y:box.bottom+offset }, { x:box.left+offset,y:box.bottom+offset }];
     }
 
     function drawScoreCrop() {
       if (!scoreCropState) return;
       const canvas = document.getElementById('score-crop-canvas');
       const ctx = canvas.getContext('2d');
+      const { controlPadding, imageWidth, imageHeight } = scoreCropState;
       ctx.clearRect(0, 0, canvas.width, canvas.height);
-      ctx.drawImage(scoreCropState.image, 0, 0, canvas.width, canvas.height);
+      ctx.fillStyle = '#080b10'; ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.drawImage(scoreCropState.image, controlPadding, controlPadding, imageWidth, imageHeight);
       ctx.fillStyle = 'rgba(0,0,0,.42)'; ctx.fillRect(0, 0, canvas.width, canvas.height);
       ctx.save(); ctx.beginPath(); scoreCropState.corners.forEach((p, i) => i ? ctx.lineTo(p.x,p.y) : ctx.moveTo(p.x,p.y)); ctx.closePath(); ctx.clip();
-      ctx.drawImage(scoreCropState.image, 0, 0, canvas.width, canvas.height); ctx.restore();
+      ctx.drawImage(scoreCropState.image, controlPadding, controlPadding, imageWidth, imageHeight); ctx.restore();
       ctx.strokeStyle = '#38bdf8'; ctx.lineWidth = 3; ctx.beginPath(); scoreCropState.corners.forEach((p, i) => i ? ctx.lineTo(p.x,p.y) : ctx.moveTo(p.x,p.y)); ctx.closePath(); ctx.stroke();
-      scoreCropState.corners.forEach(p => { ctx.fillStyle='#38bdf8'; ctx.beginPath(); ctx.arc(p.x,p.y,10,0,Math.PI*2); ctx.fill(); ctx.strokeStyle='#fff'; ctx.lineWidth=2; ctx.stroke(); });
+      scoreCropState.corners.forEach((p, i) => { ctx.fillStyle='#38bdf8'; ctx.beginPath(); ctx.arc(p.x,p.y,14,0,Math.PI*2); ctx.fill(); ctx.strokeStyle='#fff'; ctx.lineWidth=3; ctx.stroke(); ctx.fillStyle='#fff'; ctx.font='bold 11px sans-serif'; ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.fillText(String(i+1),p.x,p.y); });
     }
 
     function cropPointerPosition(event) {
@@ -252,11 +257,13 @@
       const rect = canvas.getBoundingClientRect();
       return { x:(event.clientX-rect.left)*canvas.width/rect.width, y:(event.clientY-rect.top)*canvas.height/rect.height };
     }
-    function handleCropPointerDown(event) { const p=cropPointerPosition(event); let best=Infinity; scoreCropState.corners.forEach((c,i)=>{const d=(c.x-p.x)**2+(c.y-p.y)**2;if(d<best){best=d;scoreCropState.drag=i;}}); event.currentTarget.setPointerCapture(event.pointerId); }
-    function handleCropPointerMove(event) { if (!scoreCropState || scoreCropState.drag < 0) return; const canvas=event.currentTarget,p=cropPointerPosition(event); scoreCropState.corners[scoreCropState.drag]={x:Math.max(0,Math.min(canvas.width,p.x)),y:Math.max(0,Math.min(canvas.height,p.y))}; drawScoreCrop(); }
-    function resetScoreCrop() { if (!scoreCropState) return; const c=document.getElementById('score-crop-canvas'); scoreCropState.corners=detectScoreSheetBounds(scoreCropState.image,c.width,c.height); drawScoreCrop(); }
-    function useFullScoreImage() { if (!scoreCropState) return; const c=document.getElementById('score-crop-canvas'),p=4; scoreCropState.corners=[{x:p,y:p},{x:c.width-p,y:p},{x:c.width-p,y:c.height-p},{x:p,y:c.height-p}]; drawScoreCrop(); }
-    function cancelScoreCrop() { scoreCropState=null; closeModal('modal-score-crop'); }
+    function handleCropPointerDown(event) { if(!scoreCropState)return; event.preventDefault(); const p=cropPointerPosition(event); let best=Infinity,index=-1; scoreCropState.corners.forEach((c,i)=>{const d=(c.x-p.x)**2+(c.y-p.y)**2;if(d<best){best=d;index=i;}}); if(best>55*55)return; scoreCropState.drag=index; event.currentTarget.setPointerCapture(event.pointerId); showCropLoupe(event,scoreCropState.corners[index]); }
+    function handleCropPointerMove(event) { if (!scoreCropState || scoreCropState.drag < 0) return; event.preventDefault(); const p=cropPointerPosition(event),s=scoreCropState,min=s.controlPadding,maxX=min+s.imageWidth,maxY=min+s.imageHeight; s.corners[s.drag]={x:Math.max(min,Math.min(maxX,p.x)),y:Math.max(min,Math.min(maxY,p.y))}; drawScoreCrop(); showCropLoupe(event,s.corners[s.drag]); }
+    function finishCropDrag() { if(scoreCropState)scoreCropState.drag=-1; document.getElementById('score-crop-loupe').classList.remove('active'); }
+    function showCropLoupe(event, point) { const state=scoreCropState,loupe=document.getElementById('score-crop-loupe'),wrapper=loupe.parentElement,rect=wrapper.getBoundingClientRect(),size=132; loupe.width=264; loupe.height=264; const ctx=loupe.getContext('2d'),sourceSize=90/state.scale,zoom=loupe.width/sourceSize,px=(point.x-state.controlPadding)/state.scale,py=(point.y-state.controlPadding)/state.scale; ctx.fillStyle='#080b10';ctx.fillRect(0,0,loupe.width,loupe.height);ctx.drawImage(state.image,132-px*zoom,132-py*zoom,state.image.naturalWidth*zoom,state.image.naturalHeight*zoom); ctx.strokeStyle='#38bdf8';ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(132,94);ctx.lineTo(132,170);ctx.moveTo(94,132);ctx.lineTo(170,132);ctx.stroke(); const localX=event.clientX-rect.left,localY=event.clientY-rect.top; loupe.style.left=(localX>rect.width/2?8:Math.max(8,rect.width-size-8))+'px'; loupe.style.top=(localY>rect.height/2?8:Math.max(8,rect.height-size-8))+'px'; loupe.classList.add('active'); }
+    function resetScoreCrop() { if (!scoreCropState) return; const s=scoreCropState; s.corners=detectScoreSheetBounds(s.image,s.imageWidth,s.imageHeight,s.controlPadding); drawScoreCrop(); }
+    function useFullScoreImage() { if (!scoreCropState) return; const s=scoreCropState,p=s.controlPadding; s.corners=[{x:p,y:p},{x:p+s.imageWidth,y:p},{x:p+s.imageWidth,y:p+s.imageHeight},{x:p,y:p+s.imageHeight}]; drawScoreCrop(); }
+    function cancelScoreCrop() { finishCropDrag(); scoreCropState=null; closeModal('modal-score-crop'); }
 
     async function confirmScoreCrop() {
       if (!scoreCropState) return;
@@ -287,7 +294,7 @@
     function warpAndEnhanceScoreImage(state) {
       const src=document.createElement('canvas'), scale=state.scale;
       src.width=state.image.naturalWidth; src.height=state.image.naturalHeight; src.getContext('2d').drawImage(state.image,0,0);
-      const p=state.corners.map(c=>({x:c.x/scale,y:c.y/scale}));
+      const p=state.corners.map(c=>({x:(c.x-state.controlPadding)/scale,y:(c.y-state.controlPadding)/scale}));
       const width=Math.min(1800,Math.max(600,Math.round(Math.max(Math.hypot(p[1].x-p[0].x,p[1].y-p[0].y),Math.hypot(p[2].x-p[3].x,p[2].y-p[3].y)))));
       const ratio=width/Math.max(1,Math.max(Math.hypot(p[3].x-p[0].x,p[3].y-p[0].y),Math.hypot(p[2].x-p[1].x,p[2].y-p[1].y)));
       const height=Math.max(400,Math.min(2200,Math.round(width/ratio)));
