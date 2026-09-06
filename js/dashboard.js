@@ -154,8 +154,8 @@ function renderDashboardMedals(memberId) {
 function getDashboardMedalCounts(memberId, rankings) {
   const counts = [0, 0, 0];
   Object.keys(RANKING_CATEGORY_LABELS).forEach((key) => {
-    const index = (rankings[key] || []).findIndex((item) => item.id === memberId);
-    if (index >= 0 && index < 3) counts[index]++;
+    const entry = (rankings[key] || []).find((item) => item.id === memberId);
+    if (entry && entry.rank >= 1 && entry.rank <= 3) counts[entry.rank - 1]++;
   });
   return counts;
 }

@@ -188,51 +188,83 @@
           .sort((a, b) => b.growth - a.growth);
       }
 
+      // 表示桁数で同点を判定し、同順位の次は人数分だけ順位を飛ばす。
+      const scoreKeys = {
+        avg: x => (x.totalScore / x.games).toFixed(1),
+        g3: x => x.max3GScore,
+        high: x => x.highScore,
+        games: x => x.games,
+        gapMax: x => x.bestGap,
+        gapMin: x => x.worstGap,
+        giant: x => x.giantCount,
+        strikeRate: x => x.frameStats.strikeRate.toFixed(1),
+        openFrame: x => x.frameStats.openFrameRate.toFixed(1),
+        splitCover: x => x.frameStats.splitCoverRate.toFixed(1),
+        doubleTurkey: x => x.combinedRate.toFixed(2),
+        frame10: x => x.frameStats.frame10Avg.toFixed(1),
+        fba: x => x.frameStats.firstBallAvg.toFixed(1),
+        mip: x => x.growth.toFixed(1)
+      };
+      Object.keys(result).forEach(key => {
+        result[key] = assignCompetitionRanks(result[key], scoreKeys[key]);
+      });
       return result;
+    }
+
+    function assignCompetitionRanks(sortedList, scoreFn) {
+      let previousScore;
+      let rank = 0;
+      return sortedList.map((item, index) => {
+        const score = scoreFn(item);
+        if (index === 0 || score !== previousScore) rank = index + 1;
+        previousScore = score;
+        // カテゴリ間で同じ統計オブジェクトを共有するため、順位はコピーに付ける。
+        return { ...item, rank };
+      });
     }
 
     function renderRanking() {
       const filter = document.getElementById('ranking-filter').value;
       const r = computeRankings(filter);
 
-      renderRankingList('ranking-avg', r.avg.slice(0, 5), x => `${(x.totalScore / x.games).toFixed(1)}`, x => `${x.games}G参加`);
-      renderRankingList('ranking-3g', r.g3.slice(0, 5),
+      renderRankingList('ranking-avg', r.avg.filter(x => x.rank <= 5), x => `${(x.totalScore / x.games).toFixed(1)}`, x => `${x.games}G参加`);
+      renderRankingList('ranking-3g', r.g3.filter(x => x.rank <= 5),
         x => `${x.max3GScore}点`,
         x => `${formatShortDate(x.max3GDate)} (${x.max3GBreakdown})`,
         x => x.max3GSessionId);
-      renderRankingList('ranking-high', r.high.slice(0, 5),
+      renderRankingList('ranking-high', r.high.filter(x => x.rank <= 5),
         x => `${x.highScore}点`,
         x => `${formatShortDate(x.highScoreDate)} 達成`,
         x => x.highScoreSessionId);
-      renderRankingList('ranking-games', r.games.slice(0, 5), x => `${x.games}G`, x => `投球数`);
-      renderRankingList('ranking-gap-max', r.gapMax.slice(0, 5),
+      renderRankingList('ranking-games', r.games.filter(x => x.rank <= 5), x => `${x.games}G`, x => `投球数`);
+      renderRankingList('ranking-gap-max', r.gapMax.filter(x => x.rank <= 5),
         x => `${x.bestGap}点差`,
         x => `${formatShortDate(x.bestGapDate)} (${x.bestGapBreakdown})`,
         x => x.bestGapSessionId);
-      renderRankingList('ranking-gap-min', r.gapMin.slice(0, 5),
+      renderRankingList('ranking-gap-min', r.gapMin.filter(x => x.rank <= 5),
         x => `${x.worstGap}点差`,
         x => `${formatShortDate(x.worstGapDate)} (${x.worstGapBreakdown})`,
         x => x.worstGapSessionId);
-      renderRankingList('ranking-giant', r.giant.slice(0, 5),
+      renderRankingList('ranking-giant', r.giant.filter(x => x.rank <= 5),
         x => `${x.giantCount}回`,
         x => `アベレージ ${((appData.stats[x.id] && appData.stats[x.id].totalAvg) || 0).toFixed(1)}`);
 
-      renderRankingList('ranking-strike-rate', r.strikeRate.slice(0, 5),
+      renderRankingList('ranking-strike-rate', r.strikeRate.filter(x => x.rank <= 5),
         x => `${x.frameStats.strikeRate.toFixed(1)}%`,
         x => `フレーム詳細${x.frameStats.gamesWithFrames}G分`);
-      renderRankingList('ranking-open-frame', r.openFrame.slice(0, 5),
+      renderRankingList('ranking-open-frame', r.openFrame.filter(x => x.rank <= 5),
         x => `${x.frameStats.openFrameRate.toFixed(1)}%`,
         x => `フレーム詳細${x.frameStats.gamesWithFrames}G分`);
-      renderRankingList('ranking-split-cover', r.splitCover.slice(0, 5),
+      renderRankingList('ranking-split-cover', r.splitCover.filter(x => x.rank <= 5),
         x => `${x.frameStats.splitCoverRate.toFixed(1)}%`,
         x => `${x.frameStats.splitCovered}/${x.frameStats.splitTotal}回カバー`);
-      renderRankingList('ranking-double-turkey', r.doubleTurkey.slice(0, 5),
+      renderRankingList('ranking-double-turkey', r.doubleTurkey.filter(x => x.rank <= 5),
         x => `${x.combinedRate.toFixed(2)}回/G`,
         x => `ダブル${(x.frameStats.doublesPerGame||0).toFixed(2)} / ターキー${(x.frameStats.turkeysPerGame||0).toFixed(2)}`);
-      renderRankingList('ranking-frame10', r.frame10.slice(0, 5),
+      renderRankingList('ranking-frame10', r.frame10.filter(x => x.rank <= 5),
         x => `${x.frameStats.frame10Avg.toFixed(1)}点`,
         x => `フレーム詳細${x.frameStats.gamesWithFrames}G分`);
-      renderRankingList('ranking-fba', r.fba.slice(0, 5),
+      renderRankingList('ranking-fba', r.fba.filter(x => x.rank <= 5),
         x => `${x.frameStats.firstBallAvg.toFixed(1)}本`,
         x => `フレーム詳細${x.frameStats.gamesWithFrames}G分`);
 
@@ -242,7 +274,7 @@
         mipSection.style.display = 'none';
       } else {
         mipSection.style.display = 'block';
-        renderRankingList('ranking-mip', r.mip.slice(0, 5),
+        renderRankingList('ranking-mip', r.mip.filter(x => x.rank <= 5),
           x => `+${x.growth.toFixed(1)}`,
           x => `${x.beforeAvg.toFixed(1)} → ${x.periodAvg.toFixed(1)}`);
       }
@@ -256,8 +288,8 @@
       }
 
       const medals = ['🥇', '🥈', '🥉'];
-      container.innerHTML = sortedList.map((item, idx) => {
-        const rank = idx + 1;
+      container.innerHTML = sortedList.map(item => {
+        const rank = item.rank;
         const rankClass = rank <= 3 ? `rank-${rank}` : '';
         const member = appData.members.find(m => m.id === item.id);
         const equippedIcon = member ? getAchievementIcon(member.equipped) : '';
