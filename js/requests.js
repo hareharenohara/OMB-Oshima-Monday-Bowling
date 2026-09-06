@@ -30,6 +30,7 @@
           <input type="file" accept="image/*" capture="environment" id="scan-file-${key}" style="display:none;" onchange="handleScorePhotoSelected('${key}', this)">
         </div>
         <p style="margin:0 0 8px; color:#94a3b8; font-size:11px;">画像読み取りは1日5回まで利用できます。手入力には回数制限はありません。</p>
+        <p style="margin:0 0 8px; color:#94a3b8; font-size:11px;">同じ日の結果票は分けて申請できます。承認するとその日の記録に追加されます。同じゲームを重複して申請しないでください。</p>
         <div style="display:flex; justify-content:space-between; align-items:center; font-size:12px; margin-bottom:8px;">
           <label>投球G数: <input type="number" id="gc-${key}" min="1" step="1" value="3" inputmode="numeric" onchange="updateGameSlots('${key}')" style="width:64px; padding:2px 4px;"> G</label>
         </div>
@@ -66,6 +67,17 @@
     }
 
     async function submitScoreRequest() {
+      if (submitScoreRequest.inFlight) return;
+      submitScoreRequest.inFlight = true;
+      try {
+        await sendScoreRequest();
+      } finally {
+        submitScoreRequest.inFlight = false;
+        document.getElementById('loading').style.display = 'none';
+      }
+    }
+
+    async function sendScoreRequest() {
       const mId = supabaseMemberId;
       if (!mId) return showToast('ログイン情報を取得できませんでした');
       const key = reqKey(mId);
@@ -116,7 +128,7 @@
       if (error) {
         await supabaseClient.storage.from('score-request-images').remove([imagePath]);
         if (error.code === '23505') {
-          return showToast('この日の申請が既に存在します。修正は管理者に依頼してください。');
+          return showToast('申請が重複しています。申請状況を確認してください。');
         }
         return showToast('申請に失敗しました: ' + error.message);
       }
@@ -326,47 +338,20 @@
 
     async function approveScoreRequest(requestId) {
       document.getElementById('loading').style.display = 'block';
-
-      const { data: req, error: fetchErr } = await supabaseClient
-        .from('requests').select('*').eq('id', requestId).single();
-      if (fetchErr || !req) {
+      try {
+        const { data, error } = await supabaseClient.rpc('approve_score_request', { p_request_id: requestId });
+        if (error) return showToast('記録への反映に失敗しました: ' + error.message);
+        showToast(data.already_approved ? 'この申請は既に承認されています。' : 'スコアを承認し、同じ日の記録に追加しました。');
+        if (!data.already_approved) notifyRequestEvent('member', data.member_id, 'score-approved');
+        loadApprovalList();
+        refreshPendingRequestBadge();
+        fetchData();
+      } catch (error) {
+        showToast('承認処理に失敗しました: ' + error.message);
+      } finally {
         document.getElementById('loading').style.display = 'none';
-        return showToast('申請の取得に失敗しました: ' + (fetchErr ? fetchErr.message : ''));
       }
-
-      const games = req.games || [];
-      const record = {
-        date: req.date,
-        memberId: req.member_id,
-        gameCount: games.length,
-        games: games.map(g => ({ gameNumber: g.game_number, score: g.score })),
-        frames: {}
-      };
-      games.forEach(g => {
-        record.frames[g.game_number] = { frames: g.frames || [], total: g.score };
-      });
-
-      const res = await supabaseInsertScores([record]);
-      if (!res.success) {
-        document.getElementById('loading').style.display = 'none';
-        return showToast('記録への反映に失敗しました: ' + res.message);
-      }
-
-      const { error: updErr } = await supabaseClient
-        .from('requests')
-        .update({ status: 'approved', decided_at: new Date().toISOString(), decided_by: supabaseMemberId })
-        .eq('id', requestId);
-
-      document.getElementById('loading').style.display = 'none';
-      if (updErr) return showToast('承認状態の更新に失敗しました: ' + updErr.message);
-
-      showToast('スコアを承認し、記録に反映しました。');
-      notifyRequestEvent('member', req.member_id, 'score-approved');
-      loadApprovalList();
-      refreshPendingRequestBadge();
-      fetchData();
     }
-
     async function rejectScoreRequest(requestId) {
       const reason = window.prompt('却下理由（任意・申請者に表示されます）:') || null;
       const { data: req } = await supabaseClient.from('requests').select('member_id').eq('id', requestId).single();
