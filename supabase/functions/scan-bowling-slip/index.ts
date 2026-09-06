@@ -14,6 +14,8 @@ const jsonHeaders = {
 const allowedMimeTypes = new Set(["image/jpeg", "image/png", "image/webp"]);
 const maxBase64Length = 10_000_000;
 const dailyScanLimit = 5;
+const defaultModels = ["gemini-3.8-flash", "gemini-3.7-flash", "gemini-3.6-flash"];
+const defaultModelDailyBudget = 18;
 
 const prompt = `添付画像は同じボウリング個人結果票です。1枚目は台形・コントラスト補正済み、2枚目がある場合は元画像です。必ず両方を照合してください。
 まず表の行・列、ゲーム番号、10フレームの境界を特定し、その後に各投球記号と累積スコアを読み取ってください。最終回答だけをJSONで出力してください。
@@ -48,15 +50,30 @@ Deno.serve(async (req) => {
 
   const supabaseUrl = Deno.env.get("SUPABASE_URL");
   const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY");
+  const supabaseServiceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
   const geminiApiKey = Deno.env.get("GEMINI_API_KEY");
-  const model = Deno.env.get("GEMINI_MODEL") || "gemini-3.6-flash";
+  const configuredModels = (Deno.env.get("GEMINI_MODELS") || "")
+    .split(",").map((value) => value.trim()).filter(Boolean);
+  const legacyModel = Deno.env.get("GEMINI_MODEL")?.trim();
+  const models = [...new Set([
+    ...configuredModels,
+    ...defaultModels,
+    ...(legacyModel ? [legacyModel] : []),
+  ])];
+  const configuredBudget = Number(Deno.env.get("GEMINI_MODEL_DAILY_BUDGET"));
+  const modelDailyBudget = Number.isInteger(configuredBudget) && configuredBudget > 0
+    ? configuredBudget
+    : defaultModelDailyBudget;
 
-  if (!supabaseUrl || !supabaseAnonKey || !geminiApiKey) {
+  if (!supabaseUrl || !supabaseAnonKey || !supabaseServiceRoleKey || !geminiApiKey) {
     return jsonResponse({ error: "サーバーの読み取り機能が未設定です。" }, 503);
   }
 
   const supabase = createClient(supabaseUrl, supabaseAnonKey, {
     global: { headers: { Authorization: authorization } },
+    auth: { persistSession: false },
+  });
+  const admin = createClient(supabaseUrl, supabaseServiceRoleKey, {
     auth: { persistSession: false },
   });
   const { data: authData, error: authError } = await supabase.auth.getUser();
@@ -88,9 +105,24 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const geminiResponse = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`,
-      {
+    let geminiResponse: Response | null = null;
+    let selectedModel = "";
+    for (const model of models) {
+      const { data: reserved, error: reserveError } = await admin.rpc(
+        "reserve_gemini_model_request",
+        { p_model: model, p_daily_budget: modelDailyBudget },
+      );
+      if (reserveError) {
+        console.error("Gemini usage reservation failed", model, reserveError.message);
+        return jsonResponse({ error: "画像読み取り回数を確認できませんでした。" }, 503);
+      }
+      if (!reserved) {
+        console.info("Gemini model daily budget reached", model);
+        continue;
+      }
+
+      const response = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -106,18 +138,31 @@ Deno.serve(async (req) => {
           }],
           generationConfig: {
             responseMimeType: "application/json",
-            temperature: 0,
             maxOutputTokens: 8192,
             thinkingConfig: model.startsWith("gemini-3")
               ? { thinkingLevel: "LOW" }
               : { thinkingBudget: 0 },
           },
         }),
-      },
-    );
+        },
+      );
+
+      if (response.status === 429) {
+        const quotaMessage = await response.text().catch(() => "");
+        console.warn("Gemini quota reached; trying fallback", model, quotaMessage.slice(0, 500));
+        continue;
+      }
+      geminiResponse = response;
+      selectedModel = model;
+      break;
+    }
+
+    if (!geminiResponse) {
+      return jsonResponse({ error: "本日の画像読み取り枠を使い切りました。明日もう一度お試しください。" }, 429);
+    }
 
     if (!geminiResponse.ok) {
-      console.error("Gemini API error", geminiResponse.status);
+      console.error("Gemini API error", selectedModel, geminiResponse.status);
       return jsonResponse({ error: `画像読み取りに失敗しました (${geminiResponse.status})。` }, 502);
     }
 
@@ -148,7 +193,7 @@ Deno.serve(async (req) => {
       return jsonResponse({ error: "ゲームを読み取れませんでした。手入力してください。" }, 422);
     }
 
-    return jsonResponse({ date: parsed.date ?? null, games: parsed.games });
+    return jsonResponse({ date: parsed.date ?? null, games: parsed.games, model: selectedModel });
   } catch (error) {
     console.error("scan-bowling-slip failed", error instanceof Error ? error.message : String(error));
     return jsonResponse({ error: "画像読み取り中にエラーが発生しました。" }, 500);
