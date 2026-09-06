@@ -33,6 +33,19 @@
       return `${parts[0]}/${parseInt(parts[1])}/${parseInt(parts[2])}`;
     }
 
+    function formatLocalDate(date) {
+      return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+    }
+
+    // 「月」は月初区切りではなく、今日を含む直近30日間とする。
+    function getRollingMonthBounds(referenceDate) {
+      const end = referenceDate ? new Date(referenceDate) : new Date();
+      end.setHours(0, 0, 0, 0);
+      const start = new Date(end);
+      start.setDate(start.getDate() - 29);
+      return { start: formatLocalDate(start), end: formatLocalDate(end) };
+    }
+
     // アベレージランキングの最低投球数（月あたり6G以上を基準に期間へ按分）
     function getMinGamesForAvgRanking(filter) {
       const MONTHLY_MIN = 6;
@@ -53,13 +66,13 @@
     function computeRankings(filter) {
       const now = new Date();
       const currentYear = `${now.getFullYear()}`;
-      const currentMonth = `${now.getFullYear()}-${('0' + (now.getMonth() + 1)).slice(-2)}`;
+      const rollingMonth = getRollingMonthBounds(now);
       const currentQuarter = `Q${Math.ceil((now.getMonth() + 1) / 3)}`;
 
       function isInPeriod(dateStr) {
         if (filter === 'all') return true;
         if (filter === 'year') return dateStr.startsWith(currentYear);
-        if (filter === 'month') return dateStr.startsWith(currentMonth);
+        if (filter === 'month') return dateStr >= rollingMonth.start && dateStr <= rollingMonth.end;
         if (filter === 'quarter') {
           if (!dateStr.startsWith(currentYear)) return false;
           const m = parseInt(dateStr.substring(5, 7));

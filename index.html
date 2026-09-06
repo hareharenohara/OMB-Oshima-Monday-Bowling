@@ -123,7 +123,7 @@
         <button class="dashboard-chart-open" onclick="openDashboardScoreDetail()" title="スコア詳細を開く"><div class="dashboard-score-chart"><canvas id="dashboardScoreChart"></canvas></div><small>グラフをタップしてスコア詳細を表示</small></button>
       </section>
       <div class="dashboard-link-grid">
-        <button class="dashboard-link-card dashboard-ranking-card" onclick="navigateTo('tab-ranking')"><span class="link-icon gold">🏆</span><span><small>今月のメダル</small><b id="dashboard-ranking">—</b><em>ランキングを見る</em></span><span>›</span></button>
+        <button class="dashboard-link-card dashboard-ranking-card" onclick="navigateTo('tab-ranking')"><span class="link-icon gold">🏆</span><span><small>直近1か月のメダル</small><b id="dashboard-ranking">—</b><em>ランキングを見る</em></span><span>›</span></button>
         <button class="dashboard-link-card dashboard-ticket-card ticket-feature" onclick="openTicketRequestModal()"><span class="link-icon blue">🎟️</span><span><small>回数券残量</small><b id="dashboard-ticket-balance">— G</b><em>購入申請</em></span><span>›</span></button>
       </div>
       <div class="dashboard-secondary-grid">
@@ -236,7 +236,7 @@
             <option value="all">通算（歴代）</option>
             <option value="year">今年</option>
             <option value="quarter">今四半期</option>
-            <option value="month" selected>今月</option>
+            <option value="month" selected>直近1か月</option>
           </select>
       </div>
       <p class="ranking-guide">各見出しの情報ボタンから集計方法を確認できます</p>
@@ -792,7 +792,7 @@
   <script src="js/chat.js"></script>
   <script src="js/direct-messages.js"></script>
   <script src="js/vault.js"></script>
-  <script src="js/rankings.js"></script>
+  <script src="js/rankings.js?v=20260906a"></script>
   <script src="js/history.js"></script>
   <script src="js/achievements.js"></script>
   <script src="js/avatars.js"></script>
