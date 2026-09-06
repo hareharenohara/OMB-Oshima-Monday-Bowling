@@ -12,7 +12,7 @@
       giant: 'ジャイアントキリングランキング\n\n自分の通算アベレージより+30点以上高いスコアを出した回数のランキングです。',
       strikeRate: 'ストライク率ランキング\n\n選択した期間内で、写真読み取り(フレーム詳細)のある記録が6ゲーム以上ある人を対象に、全フレームに占めるストライクの割合が高い順のランキングです。フレーム詳細のない手入力の記録は対象外です。',
       openFrame: 'オープンフレーム率ランキング\n\n選択した期間内で、フレーム詳細のある記録が6ゲーム以上ある人を対象に、ストライクにもスペアにもならなかった「オープンフレーム」の割合が低い順(堅実な順)のランキングです。',
-      splitCover: 'スプリットカバー率ランキング\n\nフレーム詳細のある記録が6ゲーム以上あり、スプリット(丸で囲まれたピン数)が出た記録がある人を対象に、スペアで処理(カバー)できた割合が高い順のランキングです。',
+      splitCover: 'スプリットカバー率ランキング\n\nフレーム詳細のある記録が6ゲーム以上あり、スプリット(丸で囲まれたピン数)をカバーした記録があり、カバー率の表示が0.0%を超える人を対象に、スペアで処理(カバー)できた割合が高い順のランキングです。',
       doubleTurkey: 'ダブル・ターキー発生率ランキング\n\nフレーム詳細のある記録が6ゲーム以上ある人を対象に、1ゲームあたりの平均でストライクが2連続(ダブル)・3連続以上(ターキー)発生した回数を合計した値が高い順のランキングです。',
       frame10: '10フレーム目 平均獲得点ランキング\n\nフレーム詳細のある記録が6ゲーム以上ある人を対象に、10フレーム目だけで獲得した点数(最大30点)の平均が高い順のランキングです。',
       fba: '1球平均倒ピン数ランキング\n\nフレーム詳細のある記録が6ゲーム以上ある人を対象に、全フレームの1投目で倒したピンの本数の平均が高い順のランキングです。'
@@ -162,7 +162,7 @@
         .sort((a,b) => b.frameStats.strikeRate - a.frameStats.strikeRate);
       result.openFrame = [...list].filter(x => x.frameStats && x.frameStats.gamesWithFrames >= MIN_GAMES_FOR_FRAME_RANKING && x.frameStats.openFrameRate != null)
         .sort((a,b) => a.frameStats.openFrameRate - b.frameStats.openFrameRate);
-      result.splitCover = [...list].filter(x => x.frameStats && x.frameStats.gamesWithFrames >= MIN_GAMES_FOR_FRAME_RANKING && x.frameStats.splitTotal > 0)
+      result.splitCover = [...list].filter(x => x.frameStats && x.frameStats.gamesWithFrames >= MIN_GAMES_FOR_FRAME_RANKING && x.frameStats.splitTotal > 0 && Number(x.frameStats.splitCoverRate?.toFixed(1)) > 0)
         .sort((a,b) => b.frameStats.splitCoverRate - a.frameStats.splitCoverRate);
       result.doubleTurkey = [...list].filter(x => x.frameStats && x.frameStats.gamesWithFrames >= MIN_GAMES_FOR_FRAME_RANKING)
         .map(x => Object.assign({}, x, { combinedRate: (x.frameStats.doublesPerGame || 0) + (x.frameStats.turkeysPerGame || 0) }))
