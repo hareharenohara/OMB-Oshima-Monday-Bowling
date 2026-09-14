@@ -315,9 +315,10 @@
     .dashboard-member-empty { width:100%; padding:16px 0; color:#94a3b8; font-size:11px; text-align:center; }
     /* Compact cover flow: each card has its own vanishing point, so distant
        cards remain visible instead of being pulled behind the center card. */
-    .dashboard-member-carousel { --member-card-width:min(48vw,190px); --carousel-edge:calc((100% - var(--member-card-width)) / 2); position:relative; perspective:none; padding-block:12px 20px; scroll-snap-type:x proximity; }
-    .dashboard-member-slide { flex-basis:var(--member-card-width); z-index:auto; transform-origin:center; transform:perspective(800px) translateZ(var(--carousel-depth,0px)) rotateY(var(--carousel-angle,0deg)); transition:none; filter:brightness(var(--carousel-light,1)); box-shadow:2px 3px 0 #0b1220,3px 4px 0 rgba(var(--card-accent-rgb),.28),0 9px 14px rgba(0,0,0,.3); }
-    .dashboard-member-slide:active { transform:perspective(800px) translateZ(var(--carousel-depth,0px)) rotateY(var(--carousel-angle,0deg)); filter:brightness(1.05); }
+    .dashboard-member-carousel { --member-card-width:min(48vw,190px); --carousel-edge:calc((100% - var(--member-card-width)) / 2); position:relative; perspective:none; padding-block:12px 20px; scroll-snap-type:x mandatory; }
+    .dashboard-member-slide { flex-basis:var(--member-card-width); z-index:1; transform-origin:center; transform:translateX(var(--carousel-shift,0px)) perspective(800px) translateZ(var(--carousel-depth,0px)) rotateY(var(--carousel-angle,0deg)); transition:none; filter:brightness(var(--carousel-light,1)); box-shadow:2px 3px 0 #0b1220,3px 4px 0 rgba(var(--card-accent-rgb),.28),0 9px 14px rgba(0,0,0,.3); }
+    .dashboard-member-slide.is-carousel-active { z-index:20; }
+    .dashboard-member-slide:active { transform:translateX(var(--carousel-shift,0px)) perspective(800px) translateZ(var(--carousel-depth,0px)) rotateY(var(--carousel-angle,0deg)); filter:brightness(1.05); }
     /* Printed stock beneath a selective foil finish. Overlays stay clipped
        to the card/artwork; the effect text remains matte and readable. */
     .dashboard-member-slide { --foil-strength:.08; --foil-position:50%; --foil-glint:.55; --foil-color:235,242,250; --carousel-depth:0px; border-radius:5px; box-shadow:1px 1px 0 #b0a797,2px 2px 0 #504b43,3px 3px 0 #121821,0 8px 14px rgba(0,0,0,.32),inset 0 1px 0 rgba(255,255,255,.3); }
