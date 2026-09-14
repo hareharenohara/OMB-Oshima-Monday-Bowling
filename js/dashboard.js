@@ -202,14 +202,11 @@ function updateDashboardMemberCarouselDepth() {
     const stride = Math.max(1, card.offsetWidth * 0.43);
     const offset = (card.offsetLeft + card.offsetWidth / 2 - center) / stride;
     const distance = Math.abs(offset);
-    const spread = Math.min(distance * 2, 1);
-    // Separate the two leading cards while they exchange depth. Their edges
-    // do not overlap at the midpoint, hiding the stacking-order handover.
-    card.style.setProperty('--carousel-shift', `${(Math.sign(offset) * card.offsetWidth * 0.24 * spread).toFixed(2)}px`);
     card.style.setProperty('--carousel-depth', `${(-Math.min(distance, 4) * 150).toFixed(2)}px`);
     card.style.setProperty('--carousel-angle', `${(-Math.sign(offset) * Math.min(distance, 1) * 52).toFixed(2)}deg`);
     card.style.setProperty('--carousel-light', String(Math.max(0.68, 1 - distance * 0.1)));
-    card.style.setProperty('--carousel-z', String(Math.max(1, 1000 - Math.round(distance * 100))));
+    card.style.removeProperty('--carousel-shift');
+    card.style.removeProperty('--carousel-z');
     // Reflections follow the same angle as the physical card, without an
     // independent shimmer animation when the carousel is at rest.
     card.style.setProperty('--foil-position', `${(50 + Math.max(-1, Math.min(1, offset)) * 45).toFixed(2)}%`);
