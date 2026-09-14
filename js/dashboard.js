@@ -198,35 +198,22 @@ function updateDashboardMemberCarouselDepth() {
   const container = document.getElementById('dashboard-member-carousel');
   if (!container) return;
   const center = container.scrollLeft + container.clientWidth / 2;
-  let nearestCard = null;
-  let nearestDistance = Infinity;
   container.querySelectorAll('.dashboard-member-slide').forEach((card) => {
-    const stride = Math.max(1, card.offsetWidth * 0.43);
-    const offset = (card.offsetLeft + card.offsetWidth / 2 - center) / stride;
+    const slot = card.parentElement;
+    const stride = Math.max(1, slot.offsetWidth * 0.43);
+    const offset = (slot.offsetLeft + slot.offsetWidth / 2 - center) / stride;
     const distance = Math.abs(offset);
     const spread = Math.min(distance * 2, 1);
     card.style.setProperty('--carousel-shift', `${(Math.sign(offset) * card.offsetWidth * 0.24 * spread).toFixed(2)}px`);
     card.style.setProperty('--carousel-depth', `${(-Math.min(distance, 4) * 150).toFixed(2)}px`);
     card.style.setProperty('--carousel-angle', `${(-Math.sign(offset) * Math.min(distance, 1) * 52).toFixed(2)}deg`);
     card.style.setProperty('--carousel-light', String(Math.max(0.68, 1 - distance * 0.1)));
-    card.style.removeProperty('--carousel-z');
-    if (distance < nearestDistance) {
-      nearestDistance = distance;
-      nearestCard = card;
-    }
+    slot.style.zIndex = String(Math.max(1, 1000 - Math.round(distance * 100)));
     // Reflections follow the same angle as the physical card, without an
     // independent shimmer animation when the carousel is at rest.
     card.style.setProperty('--foil-position', `${(50 + Math.max(-1, Math.min(1, offset)) * 45).toFixed(2)}%`);
     card.style.setProperty('--foil-glint', (0.35 + 0.4 * Math.max(0, 1 - distance / 2)).toFixed(3));
   });
-  container._nearestCarouselCard = nearestCard;
-}
-
-function settleDashboardMemberCarousel() {
-  const container = document.getElementById('dashboard-member-carousel');
-  if (!container || !container._nearestCarouselCard) return;
-  container.querySelectorAll('.dashboard-member-slide.is-carousel-active').forEach((card) => card.classList.remove('is-carousel-active'));
-  container._nearestCarouselCard.classList.add('is-carousel-active');
 }
 
 function setupDashboardMemberCarouselDepth() {
@@ -234,27 +221,23 @@ function setupDashboardMemberCarouselDepth() {
   if (!container) return;
   if (!container.dataset.depthReady) {
     let frame = 0;
-    let settleTimer = 0;
     const scheduleUpdate = () => {
       if (frame) cancelAnimationFrame(frame);
       frame = requestAnimationFrame(() => {
         frame = 0;
         updateDashboardMemberCarouselDepth();
       });
-      clearTimeout(settleTimer);
-      settleTimer = setTimeout(settleDashboardMemberCarousel, 120);
     };
     container.addEventListener('scroll', scheduleUpdate, { passive: true });
     window.addEventListener('resize', scheduleUpdate, { passive: true });
     container.addEventListener('focusin', (event) => {
       const card = event.target.closest('.dashboard-member-slide');
-      if (card && card.matches(':focus-visible')) container.scrollTo({ left: card.offsetLeft + card.offsetWidth / 2 - container.clientWidth / 2, behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
+      if (card && card.matches(':focus-visible')) container.scrollTo({ left: card.parentElement.offsetLeft + card.parentElement.offsetWidth / 2 - container.clientWidth / 2, behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
     });
     container.dataset.depthReady = 'true';
   }
   requestAnimationFrame(() => {
     updateDashboardMemberCarouselDepth();
-    settleDashboardMemberCarousel();
   });
 }
 
@@ -289,7 +272,7 @@ function renderDashboardMemberCarousel() {
     const attack = dashboardRateToCardPoint(strikeRate);
     const defense = dashboardRateToCardPoint(spareRate);
     return `
-      <button class="dashboard-member-slide member-card-${cardTier}" onclick="openMemberDashboard('${member.id}')" aria-label="${escapeHtml(member.name)}さんのダッシュボードを開く">
+      <div class="dashboard-member-slot"><button class="dashboard-member-slide member-card-${cardTier}" onclick="openMemberDashboard('${member.id}')" aria-label="${escapeHtml(member.name)}さんのダッシュボードを開く">
         <span class="tcg-nameplate"><b>${escapeHtml(member.name)}</b>${equippedIcon ? `<span class="tcg-name-badge" title="装備中の称号">${equippedIcon}</span>` : ''}</span>
         <span class="tcg-medal-row" aria-label="今月のメダル：1位${counts[0]}個、2位${counts[1]}個、3位${counts[2]}個">
           ${medalTokens || '<small>NO MEDAL</small>'}
@@ -305,7 +288,7 @@ function renderDashboardMemberCarousel() {
           <span><small>ATK/</small><b>${attack}</b></span>
           <span><small>DEF/</small><b>${defense}</b></span>
         </span>
-      </button>
+      </button></div>
     `;
   }).join('');
   setupDashboardMemberCarouselDepth();
