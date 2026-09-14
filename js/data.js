@@ -317,7 +317,7 @@
     }
 
     function getAchievementIcon(achId) {
-      const ach = ACHIEVEMENTS.find(a => a.id === achId);
+      const ach = getVisibleAchievements().find(a => a.id === achId);
       return ach ? ach.icon : '';
     }
 

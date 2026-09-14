@@ -161,7 +161,7 @@ function getDashboardMedalCounts(memberId, rankings) {
 }
 
 function buildDashboardMemberEffect(member, recent, recentAvg, totalAvg, counts, stats) {
-  const equipped = ACHIEVEMENTS.find((achievement) => achievement.id === member.equipped);
+  const equipped = getVisibleAchievements().find((achievement) => achievement.id === member.equipped);
   const titleName = equipped ? equipped.name : '無名のボウラー';
   const heading = `【${titleName.endsWith('族') ? titleName : `${titleName}族`}／効果】`;
   const sentences = [];
@@ -248,7 +248,8 @@ function renderDashboardMemberCarousel() {
 
 function renderDashboardAchievements(member, stats) {
   const unlocked = checkAchievements(stats);
-  document.getElementById('dashboard-achievement-count').textContent = `${unlocked.length} / ${ACHIEVEMENTS.length}`;
+  const visibleAchievements = getVisibleAchievements();
+  document.getElementById('dashboard-achievement-count').textContent = `${unlocked.length} / ${visibleAchievements.length}`;
   const summary = document.getElementById('dashboard-achievement-summary');
   if (!unlocked.length) {
     summary.innerHTML = '<span class="dashboard-achievement-empty">スコアを登録して実績を獲得しよう</span>';
@@ -262,8 +263,9 @@ function openDashboardAchievements() {
   const member = appData.members.find((m) => m.id === memberId);
   const stats = appData.stats[memberId];
   const unlocked = checkAchievements(stats);
-  document.getElementById('dashboard-achievements-note').textContent = `獲得済み ${unlocked.length} / ${ACHIEVEMENTS.length}　称号をタップすると詳細を確認・装備できます。`;
-  document.getElementById('dashboard-achievements-grid').innerHTML = ACHIEVEMENTS.map((achievement) => {
+  const visibleAchievements = getVisibleAchievements();
+  document.getElementById('dashboard-achievements-note').textContent = `獲得済み ${unlocked.length} / ${visibleAchievements.length}　称号をタップすると詳細を確認・装備できます。`;
+  document.getElementById('dashboard-achievements-grid').innerHTML = visibleAchievements.map((achievement) => {
     const isUnlocked = unlocked.includes(achievement.id);
     const isEquipped = member.equipped === achievement.id;
     return `<button class="achievement-item ${isUnlocked ? '' : 'locked'} ${isEquipped ? 'equipped' : ''}" onclick="showAchievementDetail('${achievement.id}', ${isUnlocked}, ${isEquipped})"><span class="achievement-icon">${achievement.icon}</span><span class="achievement-name">${escapeHtml(achievement.name)}</span></button>`;

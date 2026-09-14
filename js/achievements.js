@@ -41,12 +41,6 @@
       if (max3G >= 800) unlocked.push('p800');
       if (max3G >= 900) unlocked.push('p900');
 
-      if (stats.totalPacks >= 3) unlocked.push('pack3');
-      if (stats.totalPacks >= 10) unlocked.push('pack10');
-      if (stats.totalPacks >= 50) unlocked.push('pack50');
-      if (stats.totalPacks >= 100) unlocked.push('pack100');
-      if (stats.totalPacks >= 200) unlocked.push('pack200');
-
       let hasZorome = false;
       let hasSplit100 = false;
       scores.forEach(s => {
