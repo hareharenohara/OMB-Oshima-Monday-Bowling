@@ -194,6 +194,52 @@ function dashboardRateToCardPoint(rate) {
   return Math.floor(((rate / 100) * 10000) / 100) * 100;
 }
 
+function updateDashboardMemberCarouselDepth() {
+  const container = document.getElementById('dashboard-member-carousel');
+  if (!container) return;
+  const center = container.scrollLeft + container.clientWidth / 2;
+  container.querySelectorAll('.dashboard-member-slide').forEach((card) => {
+    const stride = Math.max(1, card.offsetWidth * 0.43);
+    const offset = (card.offsetLeft + card.offsetWidth / 2 - center) / stride;
+    const distance = Math.abs(offset);
+    const spread = Math.min(distance * 2, 1);
+    // Separate the two leading cards while they exchange depth. Their edges
+    // do not overlap at the midpoint, hiding the stacking-order handover.
+    card.style.setProperty('--carousel-shift', `${(Math.sign(offset) * card.offsetWidth * 0.24 * spread).toFixed(2)}px`);
+    card.style.setProperty('--carousel-depth', `${(-Math.min(distance, 4) * 150).toFixed(2)}px`);
+    card.style.setProperty('--carousel-angle', `${(-Math.sign(offset) * Math.min(distance, 1) * 52).toFixed(2)}deg`);
+    card.style.setProperty('--carousel-light', String(Math.max(0.68, 1 - distance * 0.1)));
+    card.style.setProperty('--carousel-z', String(Math.max(1, 1000 - Math.round(distance * 100))));
+    // Reflections follow the same angle as the physical card, without an
+    // independent shimmer animation when the carousel is at rest.
+    card.style.setProperty('--foil-position', `${(50 + Math.max(-1, Math.min(1, offset)) * 45).toFixed(2)}%`);
+    card.style.setProperty('--foil-glint', (0.35 + 0.4 * Math.max(0, 1 - distance / 2)).toFixed(3));
+  });
+}
+
+function setupDashboardMemberCarouselDepth() {
+  const container = document.getElementById('dashboard-member-carousel');
+  if (!container) return;
+  if (!container.dataset.depthReady) {
+    let frame = 0;
+    const scheduleUpdate = () => {
+      if (frame) cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(() => {
+        frame = 0;
+        updateDashboardMemberCarouselDepth();
+      });
+    };
+    container.addEventListener('scroll', scheduleUpdate, { passive: true });
+    window.addEventListener('resize', scheduleUpdate, { passive: true });
+    container.addEventListener('focusin', (event) => {
+      const card = event.target.closest('.dashboard-member-slide');
+      if (card && card.matches(':focus-visible')) container.scrollTo({ left: card.offsetLeft + card.offsetWidth / 2 - container.clientWidth / 2, behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
+    });
+    container.dataset.depthReady = 'true';
+  }
+  requestAnimationFrame(updateDashboardMemberCarouselDepth);
+}
+
 function renderDashboardMemberCarousel() {
   const container = document.getElementById('dashboard-member-carousel');
   if (!container) return;
@@ -244,6 +290,7 @@ function renderDashboardMemberCarousel() {
       </button>
     `;
   }).join('');
+  setupDashboardMemberCarouselDepth();
 }
 
 function renderDashboardAchievements(member, stats) {
