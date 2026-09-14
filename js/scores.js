@@ -180,6 +180,9 @@
 
     function setScanStatus(memberId, text, cls) {
       const el = document.getElementById(`scan-status-${memberId}`);
+      if (!el) return;
+      el.setAttribute('role', 'status');
+      el.setAttribute('aria-live', 'polite');
       el.textContent = text;
       el.className = 'scan-status-text' + (cls ? ' ' + cls : '');
     }
@@ -272,7 +275,7 @@
       }, 0) / 2);
       const cropCanvas = document.getElementById('score-crop-canvas');
       if (polygonArea < cropCanvas.width * cropCanvas.height * .04) return showToast('選択範囲が小さすぎます。結果票全体を囲んでください。');
-      setScanStatus(scoreCropState.memberId, '傾きとコントラストを補正しています（15%）...');
+      setScanStatus(scoreCropState.memberId, '結果票の傾きとコントラストを補正しています...');
       const memberId = scoreCropState.memberId;
       const output = warpAndEnhanceScoreImage(scoreCropState);
       const blob = await new Promise(resolve => output.toBlob(resolve, 'image/jpeg', .9));
@@ -304,34 +307,84 @@
       out.getContext('2d').putImageData(result,0,0); return out;
     }
 
-    async function scanPersonalSlip(memberId, base64, mime, originalBase64) {
-      setScanStatus(memberId, '画像を送信しています（45%）...');
-      const progressTimer = setTimeout(() => setScanStatus(memberId, '文字とスコアを解析しています（75%）...'), 1200);
+    const activeScanJobs = {};
+    const scanPollTimers = {};
 
+    function scoreScanProgress(job) {
+      if (job.status === 'completed') return '✅ 読み取り完了 · 内容を確認して申請してください（まだ申請されていません）';
+      const round = Math.max(1, Number(job.attempts) || 1);
+      const next = new Date(job.next_attempt_at);
+      if (job.status === 'processing' && next.getTime() <= Date.now()) {
+        return '⏳ 処理の再開待ち · 保存済み画像から自動で再開します';
+      }
+      if (job.status === 'processing') {
+        const models = ['gemini-3.8-flash', 'gemini-3.7-flash', 'gemini-3.6-flash'];
+        const index = models.indexOf(job.current_model);
+        if (index < 0) return '⏳ 読み取り準備中 · 試行' + round + '回目';
+        return '🔎 Gemini ' + ['3.8', '3.7', '3.6'][index] + 'で読み取り中（' + (index + 1) + '/3モデル・試行' + round + '回目）' +
+          (index > 0 ? ' · 前のモデルで読み取れなかったため切り替えました' : '');
+      }
+      if (job.attempts > 0) {
+        const minutes = Math.max(0, Math.ceil((next.getTime() - Date.now()) / 60000));
+        return '⏸ 一時保留 · 3モデルで読み取れませんでした（試行' + round + '回目） · ' +
+          (minutes > 0 ? '次回は' + next.toLocaleString('ja-JP') + '以降（約' + minutes + '分後）' : '再試行の順番待ち') +
+          ' · 画像は保存済み・撮り直し不要';
+      }
+      return '☁ 画像保存済み · 読み取り開始待ち · 画面を閉じても処理は続きます';
+    }
+
+    async function scanPersonalSlip(memberId, base64, mime, originalBase64) {
+      const jobId = crypto.randomUUID();
+      activeScanJobs[memberId] = jobId;
+      clearTimeout(scanPollTimers[memberId]);
+      setScanStatus(memberId, '画像を保存しています...');
       try {
         const { data, error } = await supabaseClient.functions.invoke('scan-bowling-slip', {
-          body: { imageBase64: base64, originalImageBase64: originalBase64 || null, mimeType: mime }
+          body: { jobId, contextKey: memberId, requestDate: document.getElementById('score-request-date')?.value,
+            imageBase64: base64, originalImageBase64: originalBase64 || null, mimeType: mime }
         });
-        if (error) {
-          let message = '画像読み取りサービスを利用できませんでした。';
-          if (error.context && typeof error.context.json === 'function') {
-            const errorBody = await error.context.json().catch(() => null);
-            if (errorBody && errorBody.error) message = errorBody.error;
-          }
-          throw new Error(message);
-        }
-
-        clearTimeout(progressTimer);
-        setScanStatus(memberId, '読み取り結果を確認しています（90%）...');
-        const games = Array.isArray(data && data.games) ? data.games : [];
-        if (games.length === 0) throw new Error((data && data.error) || 'ゲームを読み取れませんでした。手入力してください。');
-
-        applyScannedGames(memberId, games, data.date);
-        setScanStatus(memberId, `${games.length}ゲーム分を読み取りました。読み取り精度は完璧ではないため📋アイコンから必ず確認してください。`, 'ok');
-      } catch (err) {
-        clearTimeout(progressTimer);
-        setScanStatus(memberId, err.message || String(err), 'err');
+        if (error) throw error;
+        if (activeScanJobs[memberId] !== jobId) return;
+        await pollScoreScan(memberId, data.jobId);
+      } catch (error) {
+        // A lost response can still mean the server accepted the saved job.
+        if (activeScanJobs[memberId] !== jobId) return;
+        const { data } = await supabaseClient.from('score_scan_jobs').select('id').eq('id', jobId).maybeSingle();
+        if (data) return pollScoreScan(memberId, jobId);
+        setScanStatus(memberId, '画像の保存を確認できませんでした。通信状況を確認して再送してください。', 'err');
       }
+    }
+
+    async function pollScoreScan(memberId, jobId) {
+      if (activeScanJobs[memberId] !== jobId) return;
+      const { data: job, error } = await supabaseClient.from('score_scan_jobs')
+        .select('id,status,result,attempts,next_attempt_at,current_model').eq('id', jobId).maybeSingle();
+      if (activeScanJobs[memberId] !== jobId) return;
+      if (!error && !job) { delete activeScanJobs[memberId]; return; }
+      if (job?.status === 'completed') {
+        applyScannedGames(memberId, job.result.games, job.result.date);
+        setScanStatus(memberId, scoreScanProgress(job), 'ok');
+        if (typeof loadSavedScoreScans === 'function') loadSavedScoreScans();
+        return;
+      }
+      const message = error ? '接続を確認しています。表示を更新できませんが、保存済みの画像は自動処理されます。' : scoreScanProgress(job);
+      setScanStatus(memberId, message);
+      clearTimeout(scanPollTimers[memberId]);
+      scanPollTimers[memberId] = setTimeout(() => pollScoreScan(memberId, jobId), 5000);
+    }
+
+    async function resumeSavedScoreScan(jobId) {
+      const { data: job, error } = await supabaseClient.from('score_scan_jobs').select('*').eq('id', jobId).single();
+      if (error || !job) return showToast('保存した読み取りを取得できませんでした');
+      const key = reqKey(supabaseMemberId);
+      activeScanJobs[key] = job.id;
+      clearTimeout(scanPollTimers[key]);
+      const dataUrl = 'data:' + job.payload.mimeType + ';base64,' + job.payload.imageBase64;
+      pendingScanImages[key] = await (await fetch(dataUrl)).blob();
+      const thumb = document.getElementById('scan-thumb-' + key);
+      thumb.src = dataUrl; thumb.style.display = 'inline-block';
+      if (job.request_date) document.getElementById('score-request-date').value = job.request_date;
+      await pollScoreScan(key, job.id);
     }
 
     function normalizeFrames(frames) {

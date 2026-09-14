@@ -65,8 +65,9 @@ supabase/           Edge Functionのソース
   `scan-bowling-slip` のSecretとして管理する
 - Supabase Dashboardの「Edge Functions」→「Secrets」で
   `GEMINI_API_KEY` を登録する
-- モデルを変更する場合だけ、同じ画面で任意の `GEMINI_MODEL` を登録する
-  （未登録時は `gemini-3.6-flash`）
+- モデルは `gemini-3.8-flash` → `gemini-3.7-flash` → `gemini-3.6-flash` の順に使用する。
+  通信失敗・タイムアウト・不正JSON・不完全なフレームも次のモデルで再試行する。
+  `GEMINI_MODEL` / `GEMINI_MODELS` / `GEMINI_MODEL_DAILY_BUDGET` は使用しない。
 - Edge Functionのソースは
   `supabase/functions/scan-bowling-slip/index.ts` で管理する
 - `.env` ファイルやAPIキーはGitへコミットしない
@@ -103,3 +104,14 @@ PWAを開いて通知を許可する必要がある。
    ```
 3. `score-request-images` は非公開バケットとして作成される。申請者本人と在籍管理者だけが閲覧できる。
 4. 承認または却下から31日を過ぎた画像は、毎日実行される削除関数がStorageから削除し、申請の `image_path` も空にする。
+
+## 結果票の保留・自動再試行（2026-09-14）
+
+- 進行状況はサーバーの処理状態を5秒ごとに取得して表示する。保存待ち、実際に使用中のモデル（1/3〜3/3）と試行回数、一時保留と次回再試行時刻、完了後の確認・申請待ちを区別する。保存した読み取り一覧も自動更新する。
+
+- `20260914122340_durable_score_scan_retries.sql` を適用後、`scan-bowling-slip`（`reader.ts` を含む）とフロントエンドをセットで公開する。旧画面は202の保留レスポンスに未対応のため、アプリを更新する。
+- Edge Functionは `verify_jwt=false` で公開する。利用者は関数内の `auth.getUser`、CronはVaultの専用トークンで認証する。トークンはマイグレーションで生成され、クライアントには公開しない。既存のVault設定 `project_url` / `publishable_key` と pg_cron / pg_net が必要。
+- 全モデル失敗時は5分、10分、20分…最大6時間の間隔で継続する。Cronが毎分確認し、処理中断時は5分のリース満了後に回復する。
+- 補正画像・元画像・実施日・読み取り結果は本人のみ参照できる下書きに保持する。画面を閉じても処理され、申請画面の「確認・再開」で撮り直さずに復元できる。成功後は本人がスコアを確認して申請する。申請完了または取消で下書きを削除する。保留中は保持し続けるため、不要な下書きは取り消す。
+- 利用者の1日5回制限とアプリ独自のモデル別18回制限は適用しない。Google側の制限に達した場合は保留して再試行する。
+- 検証: `deno test supabase/functions/scan-bowling-slip/reader_test.ts`、`deno check supabase/functions/scan-bowling-slip/index.ts`、`node --test scripts/test-score-scan-ui.cjs`。

@@ -1,7 +1,7 @@
 // キャッシュのバージョン。index.html等を更新して公開する際は、
 // このバージョン文字列を必ず変更してください（古いキャッシュを破棄し、
 // ユーザー側に更新を届けるための仕組みです）。
-const CACHE_VERSION = 'omb-cache-v82-split-cover-eligibility';
+const CACHE_VERSION = 'omb-cache-v83-durable-score-scans';
 
 // アプリの外殻（起動に最低限必要なファイル）のみキャッシュ対象とする。
 // Supabaseへの通信やその他の外部APIはキャッシュしない（常に最新のデータを取得する）。
@@ -13,8 +13,8 @@ const APP_SHELL = [
   './js/auth.js',
   './js/stats.js',
   './js/data.js',
-  './js/scores.js?v=20260810c',
-  './js/requests.js?v=20260906a',
+  './js/scores.js?v=20260914a',
+  './js/requests.js?v=20260914a',
   './js/announcements.js',
   './js/schedule.js?v=20260810b',
   './js/chat.js',

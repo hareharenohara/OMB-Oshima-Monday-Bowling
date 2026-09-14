@@ -29,17 +29,55 @@
           <span class="scan-status-text" id="scan-status-${key}"></span>
           <input type="file" accept="image/*" capture="environment" id="scan-file-${key}" style="display:none;" onchange="handleScorePhotoSelected('${key}', this)">
         </div>
-        <p style="margin:0 0 8px; color:#94a3b8; font-size:11px;">画像読み取りは1日5回まで利用できます。手入力には回数制限はありません。</p>
+        <p style="margin:0 0 8px; color:#94a3b8; font-size:11px;">画像読み取りの回数制限は現在解除しています。失敗時は画像を保存して自動再試行します。</p>
         <p style="margin:0 0 8px; color:#94a3b8; font-size:11px;">同じ日の結果票は分けて申請できます。承認するとその日の記録に追加されます。同じゲームを重複して申請しないでください。</p>
         <div style="display:flex; justify-content:space-between; align-items:center; font-size:12px; margin-bottom:8px;">
           <label>投球G数: <input type="number" id="gc-${key}" min="1" step="1" value="3" inputmode="numeric" onchange="updateGameSlots('${key}')" style="width:64px; padding:2px 4px;"> G</label>
         </div>
+        <div id="saved-score-scans" aria-live="polite"></div>
         <div class="score-table" id="score-table-${key}"></div>
         <div id="calc-result-${key}" style="text-align:right; font-size:12px; font-weight:bold; margin-top:6px; color:#38bdf8;"></div>
       `;
       renderScoreTable(key);
       showModal('modal-score-request');
       loadMyPendingRequests();
+      loadSavedScoreScans();
+    }
+
+    let savedScoreScanTimer;
+    let savedScoreScanLoad = 0;
+    async function loadSavedScoreScans() {
+      clearTimeout(savedScoreScanTimer);
+      const load = ++savedScoreScanLoad;
+      const container = document.getElementById('saved-score-scans');
+      if (!container) return;
+      const { data, error } = await supabaseClient.from('score_scan_jobs')
+        .select('id,status,created_at,attempts,next_attempt_at,current_model').eq('context_key', reqKey(supabaseMemberId)).order('created_at', { ascending: false });
+      if (load !== savedScoreScanLoad) return;
+      if (document.getElementById('modal-score-request')?.style.display !== 'none') {
+        savedScoreScanTimer = setTimeout(loadSavedScoreScans, 5000);
+      }
+      if (error) { container.textContent = '進行状況を取得できません。接続回復後に自動更新します。保存済みの画像は引き続き処理されます。'; return; }
+      const html = (data?.length ? '<p style="font-size:12px;font-weight:bold;">保存した読み取り · 進行状況は自動更新されます</p>' : '') +
+        (data || []).map(job => '<div class="saved-scan-job" style="margin:8px 0;padding:10px;border:1px solid #475569;border-radius:8px;font-size:12px;line-height:1.7;">' +
+        escapeHtml(new Date(job.created_at).toLocaleString('ja-JP')) + ' ' +
+        '<div>' + escapeHtml(scoreScanProgress(job)) + '</div>' +
+        ' <button class="btn btn-sm" onclick="resumeSavedScoreScan(\'' + job.id + '\')">確認・再開</button>' +
+        ' <button class="btn btn-sm" onclick="dismissSavedScoreScan(\'' + job.id + '\')">取り消す</button></div>').join('');
+      if (container.innerHTML !== html) container.innerHTML = html;
+    }
+
+    async function dismissSavedScoreScan(jobId) {
+      const { error } = await supabaseClient.functions.invoke('scan-bowling-slip', { body: { action: 'dismiss', jobId } });
+      if (error) return showToast('取り消しに失敗しました');
+      const key = reqKey(supabaseMemberId);
+      if (activeScanJobs[key] === jobId) {
+        clearTimeout(scanPollTimers[key]); delete activeScanJobs[key];
+        delete pendingScanImages[key]; delete scannedFrameData[key];
+        renderScoreTable(key); setScanStatus(key, '読み取りを取り消しました。');
+        document.getElementById('scan-thumb-' + key).style.display = 'none';
+      }
+      loadSavedScoreScans();
     }
 
     async function loadMyPendingRequests() {
@@ -81,6 +119,11 @@
       const mId = supabaseMemberId;
       if (!mId) return showToast('ログイン情報を取得できませんでした');
       const key = reqKey(mId);
+      const scanJobId = activeScanJobs[key];
+      if (scanJobId) {
+        const { data: scanJob, error } = await supabaseClient.from('score_scan_jobs').select('status').eq('id', scanJobId).maybeSingle();
+        if (error || !scanJob || scanJob.status !== 'completed') return showToast('読み取りを一時保留しています。完了後に内容を確認して申請してください。');
+      }
       const requestImage = pendingScanImages[key];
       if (!requestImage) return showToast('申請には結果票の画像が必要です。写真を撮影して範囲を確認してください。');
 
@@ -121,7 +164,8 @@
         date: date,
         games: games,
         source: 'photo',
-        image_path: imagePath
+        image_path: imagePath,
+        scan_job_id: scanJobId || null
       });
       document.getElementById('loading').style.display = 'none';
 
@@ -133,6 +177,9 @@
         return showToast('申請に失敗しました: ' + error.message);
       }
 
+      if (scanJobId) {
+        clearTimeout(scanPollTimers[key]); delete activeScanJobs[key];
+      }
       showToast('申請を送信しました。管理者の承認をお待ちください。');
       notifyRequestEvent('admins', null, 'score-submitted');
       delete scannedFrameData[key];
